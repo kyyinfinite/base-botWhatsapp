@@ -11,6 +11,13 @@
     "/"
   ],
   "botMode": "public",
+
+  "accessDenied": {
+    "owner": "Perintah ini hanya dapat digunakan oleh owner.",
+    "creator": "Perintah ini hanya dapat digunakan oleh creator.",
+    "premium": "Perintah ini hanya dapat digunakan oleh pengguna premium."
+  },
+
   "kyyinfinite": {
     "apikey": "",
     "baseUrl": "https://www.kyyinfinite.my.id/api"
