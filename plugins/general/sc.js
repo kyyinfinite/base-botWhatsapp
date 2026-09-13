@@ -56,7 +56,7 @@ bukan untuk diakui sebagai milik sendiri.
             .setImage(thumb)
             .setBody(sc)
             .setFooter(anu)
-            .addUrl('get sc', 'https://github.com/noxXza/base-noxleyss')
+            .addUrl('get sc', 'https://github.com/kyyinfinite/base-botWhatsapp')
             .send(m.chat, { quoted: m })
     } catch (e) {
         console.error(e)
