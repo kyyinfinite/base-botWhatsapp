@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kyyinfinite Quiz Asah Otak</title>
+<style>
+:root{
+  --bg:transparent;
+  --card:transparent;
+  --card-2:#2a3942;
+  --ink:#e9edef;
+  --ink-soft:#aebac1;
+  --muted:#8696a0;
+  --accent:#00a884;
+  --accent-2:#008069;
+  --line:#2a3942;
+  --line-strong:#374248;
+  --cell-bg:#111b21;
+  --gold:#ffcb47;
+  --gold-2:#f2a900;
+  --danger:#f15c5c;
+  --sys:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{
+  background:transparent;
+  color:var(--ink);
+  font-family:var(--sys);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit}
+svg{display:block}
+
+.stage{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px 16px;
+}
+.card{width:100%;max-width:360px}
+
+.header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;padding-bottom:12px;
+  border-bottom:1px solid var(--line);
+  gap:8px;
+}
+.header__text{display:flex;flex-direction:column}
+.header__title{font-size:17px;font-weight:600;color:var(--ink);letter-spacing:-.005em}
+.header__sub{font-size:12px;color:var(--muted)}
+.icon-btn{
+  width:34px;height:34px;border-radius:50%;
+  background:var(--cell-bg);border:1px solid var(--line-strong);
+  color:var(--ink-soft);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:color .15s ease,border-color .15s ease;
+}
+.icon-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink-soft)}
+.icon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.status{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;font-size:13px;gap:8px;
+}
+.status__turn{display:flex;align-items:center;gap:8px;color:var(--ink-soft)}
+.status__indicator{width:20px;height:20px;color:var(--muted);transition:color .2s ease;flex-shrink:0}
+.status__indicator svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.status__indicator.is-hot{color:var(--gold)}
+.coin-badge{
+  display:flex;align-items:center;gap:6px;
+  background:var(--cell-bg);border:1px solid var(--line-strong);
+  border-radius:20px;padding:5px 12px 5px 8px;position:relative;
+}
+.coin-badge svg{width:18px;height:18px;stroke:var(--gold);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.coin-badge b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
+
+.timerbar{height:5px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:14px}
+.timerbar__fill{height:100%;width:100%;background:var(--accent);border-radius:3px;transition:width .1s linear,background .3s ease}
+.timerbar__fill.is-low{background:var(--danger)}
+
+.question{
+  display:flex;align-items:flex-start;gap:10px;
+  background:var(--cell-bg);border:1px solid var(--line);
+  border-radius:10px;padding:14px;margin-bottom:14px;
+  min-height:64px;
+}
+.question__icon{width:22px;height:22px;color:var(--accent);flex-shrink:0;margin-top:1px}
+.question__icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.question__text{font-size:14px;color:var(--ink);line-height:1.5;font-weight:500}
+
+.options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.option{
+  display:flex;align-items:center;gap:12px;
+  background:var(--cell-bg);border:1px solid var(--line-strong);
+  border-radius:10px;padding:11px 12px;cursor:pointer;text-align:left;
+  color:var(--ink);transition:border-color .15s ease,background .15s ease,opacity .2s ease,transform .1s ease;
+}
+.option:hover{border-color:var(--ink-soft)}
+.option:active{transform:scale(.99)}
+.option:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.option__badge{
+  width:26px;height:26px;border-radius:50%;border:1px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  font-size:12px;font-weight:700;color:var(--ink-soft);
+  transition:border-color .15s ease,color .15s ease,background .15s ease;
+}
+.option__text{flex:1;font-size:13.5px;line-height:1.4}
+.option__icon{width:17px;height:17px;flex-shrink:0;opacity:0;color:transparent;transition:opacity .15s ease}
+.option__icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.option.is-correct{border-color:var(--accent);background:rgba(0,168,132,.15)}
+.option.is-correct .option__badge{border-color:var(--accent);color:var(--accent)}
+.option.is-correct .option__icon{opacity:1;color:var(--accent)}
+.option.is-wrong{border-color:var(--danger);background:rgba(241,92,92,.15)}
+.option.is-wrong .option__badge{border-color:var(--danger);color:var(--danger)}
+.option.is-wrong .option__icon{opacity:1;color:var(--danger)}
+.option.is-disabled{pointer-events:none}
+.option.is-disabled:not(.is-correct):not(.is-wrong){opacity:.45}
+.option.is-eliminated{opacity:.32;pointer-events:none;text-decoration:line-through}
+.options.is-shaking{animation:shake .4s ease}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-7px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(3px)}
+}
+
+.levels{margin-top:2px}
+.levels__label{font-size:11px;color:var(--muted);margin-bottom:8px}
+.levels__list{
+  display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;
+  padding:2px 2px 6px;margin:0 -2px;
+}
+.levels__list::-webkit-scrollbar{display:none}
+.level{
+  display:flex;align-items:center;gap:6px;
+  background:transparent;border:1px solid var(--line-strong);
+  border-radius:20px;padding:9px 16px;font-size:13px;font-weight:500;
+  color:var(--ink-soft);cursor:pointer;white-space:nowrap;flex-shrink:0;
+  transition:color .15s ease,border-color .15s ease,background .15s ease;
+}
+.level svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.level:hover{color:var(--ink);border-color:var(--ink-soft)}
+.level.is-active{background:var(--accent);border-color:var(--accent);color:#0b141a}
+.level:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.footer{margin-top:14px;display:flex;justify-content:space-between;gap:8px}
+.action{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+  background:none;border:none;color:var(--ink-soft);
+  font-size:11px;font-weight:500;cursor:pointer;padding:8px 4px;
+  border-radius:10px;transition:color .15s ease,background .15s ease;
+}
+.action svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.action:hover{color:var(--ink);background:var(--cell-bg)}
+.action:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.action.is-shake{animation:shake .4s ease}
+.action:disabled{opacity:.4;cursor:default}
+.action:disabled:hover{background:none;color:var(--ink-soft)}
+
+.coinpop{
+  position:absolute;right:10px;top:-4px;
+  color:var(--gold);font-weight:700;font-size:13px;
+  animation:coinFloat 1s ease-out forwards;pointer-events:none;
+}
+@keyframes coinFloat{
+  0%{opacity:0;transform:translateY(0)}
+  15%{opacity:1}
+  100%{opacity:0;transform:translateY(-26px)}
+}
+
+.modal{
+  position:fixed;inset:0;z-index:50;
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
+}
+.modal.is-open{opacity:1;pointer-events:auto}
+.modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.modal__card{
+  position:relative;background:var(--card-2);border-radius:12px;
+  padding:26px 24px 0;text-align:center;max-width:320px;width:100%;
+  box-shadow:0 24px 50px -12px rgba(0,0,0,.6);
+  transform:translateY(8px) scale(.96);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);overflow:hidden;
+}
+.modal.is-open .modal__card{transform:translateY(0) scale(1)}
+.modal__icon{width:46px;height:46px;color:var(--gold);margin:0 auto 12px}
+.modal__icon svg{width:100%;height:100%;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.modal__title{font-size:20px;font-weight:700;letter-spacing:-.015em;color:var(--ink);margin-bottom:8px;line-height:1.25}
+.modal__sub{font-size:14px;color:var(--muted);margin-bottom:20px;line-height:1.45}
+.modal__retry{
+  background:transparent;border:none;color:var(--accent);
+  font-size:16px;font-weight:600;letter-spacing:-.005em;cursor:pointer;
+  padding:14px 24px;width:100%;border-top:1px solid var(--line-strong);
+  transition:color .15s ease;
+}
+.modal__retry:hover{color:var(--ink)}
+.modal__retry:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+@media (max-width:380px){
+  .stage{padding:16px 12px}
+  .level{padding:8px 13px;font-size:12px}
+  .option{padding:10px 10px}
+  .option__text{font-size:13px}
+  .modal__title{font-size:18px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<main class="stage">
+  <div class="card">
+    <div class="header">
+      <div class="header__text">
+        <div class="header__title">kyyinfinite Quiz Asah Otak</div>
+        <div class="header__sub">Jawab, kumpulkan koin</div>
+      </div>
+      <button class="icon-btn" id="soundToggle" aria-label="Suara"></button>
+    </div>
+
+    <div class="status" aria-live="polite">
+      <div class="status__turn">
+        <span class="status__indicator" id="streakDot"></span>
+        <span id="statusText">Ronde 1 • Soal 1/5</span>
+      </div>
+      <div class="coin-badge" id="coinBadge">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+        <b id="coinCount">0</b>
+      </div>
+    </div>
+
+    <div class="timerbar"><div class="timerbar__fill" id="timerFill"></div></div>
+
+    <div class="question">
+      <span class="question__icon" id="qIcon"></span>
+      <span class="question__text" id="qText">Memuat soal…</span>
+    </div>
+
+    <div class="options" id="options" role="group" aria-label="Pilihan jawaban"></div>
+
+    <div class="levels">
+      <div class="levels__label">Kategori</div>
+      <div class="levels__list" id="levelsList" role="radiogroup" aria-label="Kategori soal"></div>
+    </div>
+
+    <div class="footer">
+      <button class="action" id="btnRestart"></button>
+      <button class="action" id="btnHint"></button>
+      <button class="action" id="btnSkip"></button>
+    </div>
+  </div>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal__backdrop" id="modalBackdrop"></div>
+  <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-3 1 .5 3 2 3 5a5 5 0 0 1-10 0c0-5 3-6 5-11z"/></svg>
+    </div>
+    <h2 class="modal__title" id="modalTitle">Ronde Selesai</h2>
+    <p class="modal__sub" id="modalSub">Kamu mengumpulkan koin.</p>
+    <button class="modal__retry" id="modalRetry">Lanjut</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- ICONS ---------- */
+const ICON = {
+  speakerOn:'<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M18.6 5.4a9 9 0 0 1 0 13.2"/></svg>',
+  speakerOff:'<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>',
+  restart:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>',
+  hint:'<svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 3z"/></svg>',
+  skip:'<svg viewBox="0 0 24 24"><path d="M5 5l9 7-9 7V5z"/><path d="M18 5v14"/></svg>',
+  flame:'<svg viewBox="0 0 24 24"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-3 1 .5 3 2 3 5a5 5 0 0 1-10 0c0-5 3-6 5-11z"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>',
+  cross:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  brain:'<svg viewBox="0 0 24 24"><path d="M12 4c-2 0-3.4 1.3-3.7 3C6.9 7.3 6 8.7 6 10.2c0 1 .4 1.9 1 2.6-.6.6-1 1.5-1 2.5 0 1.9 1.5 3.4 3.4 3.7.4 1.2 1.5 2 2.9 2h.4c1.4 0 2.5-.8 2.9-2 1.9-.3 3.4-1.8 3.4-3.7 0-1-.4-1.9-1-2.5.6-.7 1-1.6 1-2.6 0-1.5-.9-2.9-2.3-3.2C15.4 5.3 14 4 12 4z"/></svg>',
+  calc:'<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8"/><circle cx="8" cy="12" r=".7"/><circle cx="12" cy="12" r=".7"/><circle cx="16" cy="12" r=".7"/><circle cx="8" cy="16" r=".7"/><circle cx="12" cy="16" r=".7"/><circle cx="16" cy="16" r=".7"/></svg>',
+  globe:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.4 2.5 3.8 6 3.8 9s-1.4 6.5-3.8 9c-2.4-2.5-3.8-6-3.8-9s1.4-6.5 3.8-9z"/></svg>',
+  flask:'<svg viewBox="0 0 24 24"><path d="M9 3h6"/><path d="M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 15h8"/></svg>',
+  book:'<svg viewBox="0 0 24 24"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5v-13z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5v-13z"/></svg>'
+};
+
+/* ---------- QUESTION DATA ---------- */
+const CATEGORIES = [
+  { name:'Logika', icon:ICON.brain, questions:[
+    {q:'Semakin banyak diambil dari sini, semakin besar yang tertinggal. Apakah itu?',options:['Lubang','Uang','Waktu','Buku'],correct:0},
+    {q:"Ada berapa huruf 'S' dalam kata STATISTIK?",options:['1','2','3','4'],correct:1},
+    {q:'Jika hari ini Senin, maka 100 hari lagi jatuh pada hari?',options:['Selasa','Rabu','Kamis','Jumat'],correct:1},
+    {q:'Manakah bilangan yang berbeda dari yang lain: 3, 5, 7, 9, 11?',options:['5','7','9','11'],correct:2},
+    {q:'Lanjutkan polanya: 2, 4, 8, 16, ...?',options:['20','24','32','30'],correct:2},
+    {q:'Semua kucing adalah hewan. Milo adalah kucing. Maka...',options:['Milo adalah hewan','Milo bukan hewan','Semua hewan adalah kucing','Tidak bisa disimpulkan'],correct:0},
+    {q:'Berapa banyak sisi yang dimiliki sebuah segi enam?',options:['5','6','7','8'],correct:1},
+    {q:'Cermin memantulkan bayangan secara...',options:['Terbalik atas-bawah','Terbalik kiri-kanan','Sama persis','Diperbesar dua kali'],correct:1},
+    {q:'Manakah yang bukan sekelompok: Apel, Jeruk, Wortel, Mangga?',options:['Apel','Jeruk','Wortel','Mangga'],correct:2}
+  ]},
+  { name:'Matematika', icon:ICON.calc, questions:[
+    {q:'Berapa hasil dari 12 x 8?',options:['86','96','106','116'],correct:1},
+    {q:'Akar kuadrat dari 144 adalah?',options:['11','12','13','14'],correct:1},
+    {q:'Berapa 25% dari 200?',options:['25','40','50','75'],correct:2},
+    {q:'Hasil dari 7! dibagi 6! adalah?',options:['6','7','42','5040'],correct:1},
+    {q:'Jika x + 5 = 12, maka x = ?',options:['5','6','7','8'],correct:2},
+    {q:'Berapa jumlah sudut dalam segitiga?',options:['90','180','270','360'],correct:1},
+    {q:'Bilangan prima terkecil adalah?',options:['0','1','2','3'],correct:2},
+    {q:'Hasil dari 9 kuadrat (9²) adalah?',options:['18','72','81','99'],correct:2},
+    {q:'Berapa hasil 100 dibagi 4 lalu dikali 3?',options:['65','70','75','80'],correct:2}
+  ]},
+  { name:'Umum', icon:ICON.globe, questions:[
+    {q:'Ibu kota Indonesia adalah?',options:['Bandung','Jakarta','Surabaya','Medan'],correct:1},
+    {q:'Planet terdekat dengan Matahari adalah?',options:['Venus','Bumi','Merkurius','Mars'],correct:2},
+    {q:'Benua terbesar di dunia adalah?',options:['Afrika','Asia','Eropa','Amerika'],correct:1},
+    {q:"Hewan apa yang dijuluki 'raja hutan'?",options:['Gajah','Harimau','Singa','Serigala'],correct:2},
+    {q:'Bahasa resmi negara Brasil adalah?',options:['Spanyol','Portugis','Inggris','Prancis'],correct:1},
+    {q:'Piramida Giza terletak di negara?',options:['Meksiko','India','Mesir','Yunani'],correct:2},
+    {q:'Organ tubuh yang memompa darah adalah?',options:['Paru-paru','Jantung','Ginjal','Hati'],correct:1},
+    {q:'Mata uang resmi Jepang adalah?',options:['Won','Yuan','Yen','Ringgit'],correct:2},
+    {q:'Menara Eiffel berada di kota?',options:['London','Roma','Paris','Berlin'],correct:2}
+  ]},
+  { name:'Sains', icon:ICON.flask, questions:[
+    {q:'H2O adalah rumus kimia dari?',options:['Garam','Air','Oksigen','Gula'],correct:1},
+    {q:"Planet yang dijuluki 'Planet Merah' adalah?",options:['Venus','Mars','Jupiter','Saturnus'],correct:1},
+    {q:'Proses tumbuhan membuat makanan dengan bantuan cahaya matahari disebut?',options:['Respirasi','Fotosintesis','Transpirasi','Fermentasi'],correct:1},
+    {q:'Kecepatan cahaya kira-kira berapa km per detik?',options:['30 ribu','300 ribu','3 juta','30 juta'],correct:1},
+    {q:'Gas yang paling banyak terkandung di atmosfer bumi adalah?',options:['Oksigen','Karbon dioksida','Nitrogen','Hidrogen'],correct:2},
+    {q:'Bagian sel yang mengatur seluruh aktivitas sel disebut?',options:['Mitokondria','Nukleus','Ribosom','Membran'],correct:1},
+    {q:'Air mendidih pada suhu berapa derajat Celsius di permukaan laut?',options:['90','95','100','110'],correct:2},
+    {q:'Hewan yang mengalami metamorfosis sempurna adalah?',options:['Belalang','Kupu-kupu','Capung','Kecoa'],correct:1},
+    {q:'Magnet memiliki berapa kutub utama?',options:['1','2','3','4'],correct:1}
+  ]},
+  { name:'Bahasa', icon:ICON.book, questions:[
+    {q:"Sinonim dari kata 'Cerdas' adalah?",options:['Bodoh','Pintar','Malas','Lambat'],correct:1},
+    {q:"Antonim dari kata 'Tinggi' adalah?",options:['Besar','Pendek','Kecil','Panjang'],correct:1},
+    {q:"Kata 'Bank' termasuk jenis kata?",options:['Kata kerja','Kata benda','Kata sifat','Kata keterangan'],correct:1},
+    {q:'Manakah penulisan yang benar sesuai EYD?',options:['Di rumah','Dirumah','Di-rumah','Di_rumah'],correct:0},
+    {q:"Peribahasa 'Bagai pungguk merindukan bulan' bermakna?",options:['Cinta yang mustahil tercapai','Kerja keras berbuah manis','Berani karena benar','Air tenang menghanyutkan'],correct:0},
+    {q:"Sinonim dari kata 'Cepat' adalah?",options:['Lambat','Lekas','Diam','Berat'],correct:1},
+    {q:'Manakah penulisan kata baku yang benar?',options:['Aktifitas','Aktivitas','Akttivitas','Aktivitass'],correct:1},
+    {q:"Antonim dari kata 'Rajin' adalah?",options:['Giat','Tekun','Malas','Ulet'],correct:2},
+    {q:'Kalimat tanya biasanya diakhiri dengan tanda?',options:['Titik','Koma','Tanya','Seru'],correct:2}
+  ]}
+];
+const ROUND_LENGTH = 5;
+
+/* ---------- STATE ---------- */
+const state = {
+  categoryIndex:0, category:CATEGORIES[0],
+  queue:[], currentQ:null, answered:false, hintUsed:false,
+  timeLeft:0, maxTime:16, timerHandle:null,
+  round:0, qIndex:0, roundScore:0, streak:0,
+  coins: 0,
+  soundOn: true
+};
+
+/* ---------- DOM ---------- */
+const $=id=>document.getElementById(id);
+const optionsEl=$('options'), levelsList=$('levelsList');
+const qTextEl=$('qText'), qIconEl=$('qIcon');
+const statusTextEl=$('statusText'), streakDotEl=$('streakDot');
+const coinCountEl=$('coinCount'), coinBadge=$('coinBadge');
+const timerFill=$('timerFill'), soundToggle=$('soundToggle');
+const btnRestart=$('btnRestart'), btnHint=$('btnHint'), btnSkip=$('btnSkip');
+const modal=$('modal'), modalTitle=$('modalTitle'), modalSub=$('modalSub'), modalRetry=$('modalRetry');
+
+btnRestart.innerHTML = ICON.restart + '<span>Ulang</span>';
+btnHint.innerHTML = ICON.hint + '<span>50:50</span>';
+btnSkip.innerHTML = ICON.skip + '<span>Lewati</span>';
+streakDotEl.innerHTML = ICON.flame;
+
+/* ---------- SOUND (Web Audio API, no external files) ---------- */
+let audioCtx=null;
+function ensureAudio(){
+  if(audioCtx) return audioCtx;
+  const AudioCtor=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtor) return null;
+  try{
+    audioCtx=new AudioCtor();
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    return audioCtx;
+  }catch(e){
+    audioCtx=null;
+    return null;
+  }
+}
+function tone(freq,start,duration,type,peak){
+  if(!state.soundOn) return;
+  const ac=ensureAudio();
+  if(!ac) return;
+  const t0=ac.currentTime+start;
+  const osc=ac.createOscillator();
+  const gain=ac.createGain();
+  osc.type=type; osc.frequency.setValueAtTime(freq,t0);
+  gain.gain.setValueAtTime(0,t0);
+  gain.gain.linearRampToValueAtTime(peak,t0+0.018);
+  gain.gain.exponentialRampToValueAtTime(0.0001,t0+duration);
+  osc.connect(gain).connect(ac.destination);
+  osc.start(t0); osc.stop(t0+duration+0.03);
+}
+const sfx = {
+  tap:()=>tone(520,0,0.07,'sine',0.10),
+  correct:()=>{tone(660,0,0.12,'triangle',0.15);tone(880,0.1,0.14,'triangle',0.15);tone(1108,0.2,0.18,'triangle',0.17);},
+  wrong:()=>{tone(190,0,0.16,'sawtooth',0.16);tone(130,0.09,0.2,'sawtooth',0.14);},
+  coin:()=>{tone(1200,0,0.06,'square',0.10);tone(1600,0.05,0.1,'square',0.10);},
+  round:()=>{tone(523,0,0.12,'triangle',0.14);tone(659,0.12,0.12,'triangle',0.14);tone(784,0.24,0.12,'triangle',0.14);tone(1047,0.36,0.26,'triangle',0.17);},
+  hint:()=>{tone(410,0,0.09,'sine',0.09);tone(520,0.08,0.12,'sine',0.09);}
+};
+function renderSoundIcon(){ soundToggle.innerHTML = state.soundOn ? ICON.speakerOn : ICON.speakerOff; }
+soundToggle.addEventListener('click',()=>{
+  state.soundOn=!state.soundOn;
+
+  renderSoundIcon();
+  if(state.soundOn){ sfx.tap(); }
+});
+
+/* ---------- HELPERS ---------- */
+function shuffleArr(arr){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function saveCoins(){ return state.coins; }
+
+/* ---------- LEVELS (CATEGORIES) PANEL ---------- */
+function buildLevels(){
+  levelsList.innerHTML='';
+  CATEGORIES.forEach((cat,i)=>{
+    const b=document.createElement('button');
+    b.className='level'+(i===state.categoryIndex?' is-active':'');
+    b.setAttribute('role','radio');
+    b.setAttribute('aria-checked', i===state.categoryIndex?'true':'false');
+    b.innerHTML = cat.icon + '<span>'+cat.name+'</span>';
+    b.addEventListener('click',()=>selectCategory(i));
+    levelsList.appendChild(b);
+  });
+}
+function selectCategory(i){
+  state.categoryIndex=i;
+  state.category=CATEGORIES[i];
+  document.querySelectorAll('.level').forEach((el,idx)=>{
+    const on=idx===i;
+    el.classList.toggle('is-active',on);
+    el.setAttribute('aria-checked',on?'true':'false');
+  });
+  startRound();
+}
+
+/* ---------- RENDER ---------- */
+const LETTERS=['A','B','C','D'];
+function renderOptions(){
+  optionsEl.innerHTML='';
+  optionsEl.classList.remove('is-shaking');
+  state.currentQ.shuffled.forEach((opt,i)=>{
+    const b=document.createElement('button');
+    b.className='option';
+    b.type='button';
+    b.innerHTML =
+      '<span class="option__badge">'+LETTERS[i]+'</span>'+
+      '<span class="option__text">'+opt.t+'</span>'+
+      '<span class="option__icon"></span>';
+    b.addEventListener('click',()=>onOptionClick(i));
+    optionsEl.appendChild(b);
+  });
+}
+function updateHeader(){
+  coinCountEl.textContent=state.coins;
+  const qNum = Math.min(state.qIndex+1, ROUND_LENGTH);
+  statusTextEl.textContent = 'Ronde '+state.round+' • Soal '+qNum+'/'+ROUND_LENGTH;
+  streakDotEl.classList.toggle('is-hot', state.streak>=3);
+}
+function updateTimerBar(){
+  const pct = Math.max(0, state.timeLeft/state.maxTime*100);
+  timerFill.style.width = pct+'%';
+  timerFill.classList.toggle('is-low', pct<30);
+}
+function popCoin(amount){
+  const el=document.createElement('span');
+  el.className='coinpop';
+  el.textContent='+'+amount;
+  coinBadge.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+/* ---------- TIMER ---------- */
+function clearTimer(){ if(state.timerHandle){ clearInterval(state.timerHandle); state.timerHandle=null; } }
+function startTimer(){
+  clearTimer();
+  state.timeLeft=state.maxTime;
+  updateTimerBar();
+  state.timerHandle=setInterval(()=>{
+    state.timeLeft-=0.1;
+    if(state.timeLeft<=0){ state.timeLeft=0; updateTimerBar(); clearTimer(); timeUp(); return; }
+    updateTimerBar();
+  },100);
+}
+
+/* ---------- GAME FLOW ---------- */
+function startRound(){
+  state.round=(state.round||0)+1;
+  state.qIndex=0;
+  state.roundScore=0;
+  state.queue=shuffleArr(state.category.questions);
+  hideModal();
+  nextQuestion();
+}
+function nextQuestion(){
+  if(state.qIndex>=ROUND_LENGTH){ showRoundModal(); return; }
+  if(state.queue.length===0) state.queue=shuffleArr(state.category.questions);
+  const raw=state.queue.pop();
+  const pairs = raw.options.map((t,i)=>({t,correct:i===raw.correct}));
+  state.currentQ = { q:raw.q, shuffled: shuffleArr(pairs) };
+  state.answered=false;
+  state.hintUsed=false;
+  state.maxTime = 16;
+  qTextEl.textContent = state.currentQ.q;
+  qIconEl.innerHTML = state.category.icon;
+  btnHint.disabled=false;
+  renderOptions(); updateHeader(); startTimer();
+}
+function onOptionClick(i){
+  if(state.answered) return;
+  const chosen = state.currentQ.shuffled[i];
+  if(chosen.correct) correctAnswer(i); else wrongAnswer(i);
+}
+function revealAnswer(chosenIdx){
+  const btns=optionsEl.children;
+  state.currentQ.shuffled.forEach((opt,i)=>{
+    const btn=btns[i];
+    btn.classList.add('is-disabled');
+    if(opt.correct){
+      btn.classList.add('is-correct');
+      btn.querySelector('.option__icon').innerHTML=ICON.check;
+    } else if(i===chosenIdx){
+      btn.classList.add('is-wrong');
+      btn.querySelector('.option__icon').innerHTML=ICON.cross;
+    }
+  });
+}
+function correctAnswer(idx){
+  state.answered=true;
+  clearTimer();
+  revealAnswer(idx);
+  const bonusTime=Math.ceil(state.timeLeft);
+  const earned=5+Math.floor(bonusTime/2)+state.streak*2;
+  state.streak++;
+  state.coins+=earned;
+  state.roundScore+=earned;
+  saveCoins();
+  sfx.correct(); setTimeout(sfx.coin,150);
+  updateHeader();
+  popCoin(earned);
+  setTimeout(()=>{ state.qIndex++; nextQuestion(); },1100);
+}
+function wrongAnswer(idx){
+  state.answered=true;
+  clearTimer();
+  revealAnswer(idx);
+  optionsEl.classList.add('is-shaking');
+  sfx.wrong();
+  state.streak=0;
+  updateHeader();
+  setTimeout(()=>{ state.qIndex++; nextQuestion(); },1200);
+}
+function timeUp(){
+  if(state.answered) return;
+  state.answered=true;
+  revealAnswer(-1);
+  optionsEl.classList.add('is-shaking');
+  sfx.wrong();
+  state.streak=0;
+  updateHeader();
+  setTimeout(()=>{ state.qIndex++; nextQuestion(); },1200);
+}
+function showRoundModal(){
+  clearTimer();
+  modalTitle.textContent='Ronde Selesai';
+  modalSub.textContent='Kamu mengumpulkan '+state.roundScore+' koin di ronde ini. Total koin: '+state.coins+'.';
+  sfx.round();
+  modal.hidden=false; void modal.offsetWidth; modal.classList.add('is-open');
+  setTimeout(()=>modalRetry.focus(),80);
+}
+function hideModal(){
+  modal.classList.remove('is-open');
+  setTimeout(()=>{ modal.hidden=true; },350);
+}
+
+/* ---------- FOOTER ACTIONS ---------- */
+btnHint.addEventListener('click',()=>{
+  if(state.answered || state.hintUsed) return;
+  if(state.coins<15){
+    btnHint.classList.add('is-shake');
+    setTimeout(()=>btnHint.classList.remove('is-shake'),400);
+    return;
+  }
+  const wrongIdxs=[];
+  state.currentQ.shuffled.forEach((o,i)=>{ if(!o.correct) wrongIdxs.push(i); });
+  const toEliminate = shuffleArr(wrongIdxs).slice(0,2);
+  if(toEliminate.length<2) return;
+  state.coins-=15; saveCoins();
+  state.hintUsed=true;
+  btnHint.disabled=true;
+  const btns=optionsEl.children;
+  toEliminate.forEach(i=>btns[i].classList.add('is-eliminated'));
+  sfx.hint();
+  updateHeader();
+});
+btnSkip.addEventListener('click',()=>{
+  if(state.answered) return;
+  clearTimer();
+  state.answered=true;
+  state.streak=0;
+  updateHeader();
+  state.qIndex++;
+  nextQuestion();
+});
+btnRestart.addEventListener('click', startRound);
+modalRetry.addEventListener('click',startRound);
+$('modalBackdrop').addEventListener('click',startRound);
+document.addEventListener('keydown',(e)=>{
+  if(!modal.classList.contains('is-open')) return;
+  if(e.key==='Escape'||e.key==='Enter'){ e.preventDefault(); startRound(); }
+});
+
+/* ---------- INIT ---------- */
+renderSoundIcon();
+buildLevels();
+updateHeader();
+startRound();
+
+})();
+</script>
+</body>
+</html>

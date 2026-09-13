@@ -1,0 +1,18 @@
+{
+  "botName": "kyyinfinite",
+  "ownerName": "Your Name",
+  "creator": [
+    "628xxxxxxxxxx"
+  ],
+  "prefix": [
+    ".",
+    "#",
+    "!",
+    "/"
+  ],
+  "botMode": "public",
+  "kyyinfinite": {
+    "apikey": "",
+    "baseUrl": "https://www.kyyinfinite.my.id/api"
+  }
+}

@@ -1,0 +1,2639 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>kyyinfinite Susun Kata</title>
+
+<style>
+:root{
+  --bg:transparent;
+  --card:transparent;
+  --card-2:#2a3942;
+  --ink:#e9edef;
+  --ink-soft:#aebac1;
+  --muted:#8696a0;
+  --accent:#00a884;
+  --accent-2:#008069;
+  --line:#2a3942;
+  --line-strong:#374248;
+  --cell-bg:#111b21;
+  --gold:#ffcb47;
+  --gold-2:#f2a900;
+  --danger:#f15c5c;
+  --sys:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+html,body{
+  background:transparent;
+  color:var(--ink);
+  font-family:var(--sys);
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+button{
+  font-family:inherit;
+}
+
+svg{
+  display:block;
+}
+
+.stage{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:24px 16px;
+}
+
+.card{
+  width:100%;
+  max-width:360px;
+}
+
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--line);
+  gap:8px;
+}
+
+.header__text{
+  display:flex;
+  flex-direction:column;
+}
+
+.header__title{
+  font-size:17px;
+  font-weight:600;
+  color:var(--ink);
+  letter-spacing:-.005em;
+}
+
+.header__sub{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.icon-btn{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:var(--cell-bg);
+  border:1px solid var(--line-strong);
+  color:var(--ink-soft);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  transition:color .15s ease,border-color .15s ease;
+}
+
+.icon-btn svg{
+  width:17px;
+  height:17px;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.icon-btn:hover{
+  color:var(--ink);
+  border-color:var(--ink-soft);
+}
+
+.icon-btn:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+
+.status{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+  font-size:13px;
+  gap:8px;
+}
+
+.status__turn{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--ink-soft);
+}
+
+.status__indicator{
+  width:20px;
+  height:20px;
+  color:var(--muted);
+  transition:color .2s ease;
+  flex-shrink:0;
+}
+
+.status__indicator svg{
+  width:100%;
+  height:100%;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.status__indicator.is-hot{
+  color:var(--gold);
+}
+
+.coin-badge{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:var(--cell-bg);
+  border:1px solid var(--line-strong);
+  border-radius:20px;
+  padding:5px 12px 5px 8px;
+  position:relative;
+}
+
+.coin-badge svg{
+  width:18px;
+  height:18px;
+  stroke:var(--gold);
+  fill:none;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.coin-badge b{
+  color:var(--ink);
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+  font-size:13px;
+}
+
+.timerbar{
+  height:5px;
+  border-radius:3px;
+  background:var(--line);
+  overflow:hidden;
+  margin-bottom:14px;
+}
+
+.timerbar__fill{
+  height:100%;
+  width:100%;
+  background:var(--accent);
+  border-radius:3px;
+  transition:width .1s linear,background .3s ease;
+}
+
+.timerbar__fill.is-low{
+  background:var(--danger);
+}
+
+.clue{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:var(--cell-bg);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px 14px;
+  margin-bottom:16px;
+  min-height:52px;
+}
+
+.clue__icon{
+  width:22px;
+  height:22px;
+  color:var(--accent);
+  flex-shrink:0;
+}
+
+.clue__icon svg{
+  width:100%;
+  height:100%;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.clue__text{
+  font-size:13px;
+  color:var(--ink-soft);
+  line-height:1.45;
+}
+
+.slots{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  justify-content:center;
+  margin-bottom:20px;
+  min-height:46px;
+  transition:transform .12s ease;
+}
+
+.slot{
+  width:38px;
+  height:44px;
+  border-radius:8px;
+  border:1.5px dashed var(--line-strong);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:19px;
+  font-weight:700;
+  color:var(--ink);
+  cursor:default;
+  user-select:none;
+  transition:border-color .15s ease,background .15s ease,transform .15s ease;
+}
+
+.slot.is-filled{
+  border-style:solid;
+  border-color:var(--accent);
+  background:rgba(0,168,132,.12);
+  cursor:pointer;
+  animation:slotPop .18s ease-out;
+}
+
+@keyframes slotPop{
+  0%{transform:scale(.7)}
+  100%{transform:scale(1)}
+}
+
+.slots.is-correct .slot.is-filled{
+  border-color:var(--accent);
+  background:rgba(0,168,132,.28);
+  color:var(--accent);
+}
+
+.slots.is-wrong{
+  animation:shake .4s ease;
+}
+
+.slots.is-wrong .slot.is-filled{
+  border-color:var(--danger);
+  background:rgba(241,92,92,.18);
+  color:var(--danger);
+}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-7px)}
+  40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)}
+  80%{transform:translateX(3px)}
+}
+
+.tiles{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:center;
+  margin-bottom:18px;
+  min-height:46px;
+}
+
+.tile{
+  width:40px;
+  height:46px;
+  border-radius:10px;
+  background:var(--cell-bg);
+  border:1px solid var(--line-strong);
+  color:var(--ink);
+  font-size:19px;
+  font-weight:700;
+  cursor:pointer;
+  transition:transform .1s ease,border-color .15s ease,visibility 0s,opacity .15s ease;
+}
+
+.tile:hover{
+  border-color:var(--ink-soft);
+}
+
+.tile:active{
+  transform:scale(.92);
+}
+
+.tile:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+
+.tile.is-placed{
+  visibility:hidden;
+}
+
+.levels{
+  margin-top:2px;
+}
+
+.levels__label{
+  font-size:11px;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+
+.levels__list{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:8px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  padding:2px 2px 6px;
+  margin:0 -2px;
+}
+
+.levels__list::-webkit-scrollbar{
+  display:none;
+}
+
+.level{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:transparent;
+  border:1px solid var(--line-strong);
+  border-radius:20px;
+  padding:9px 16px;
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink-soft);
+  cursor:pointer;
+  white-space:nowrap;
+  flex-shrink:0;
+  transition:color .15s ease,border-color .15s ease,background .15s ease;
+}
+
+.level svg{
+  width:15px;
+  height:15px;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.level:hover{
+  color:var(--ink);
+  border-color:var(--ink-soft);
+}
+
+.level.is-active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#0b141a;
+}
+
+.level:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+
+.footer{
+  margin-top:14px;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.action{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+  background:none;
+  border:none;
+  color:var(--ink-soft);
+  font-size:11px;
+  font-weight:500;
+  cursor:pointer;
+  padding:8px 4px;
+  border-radius:10px;
+  transition:color .15s ease,background .15s ease;
+}
+
+.action svg{
+  width:19px;
+  height:19px;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.action:hover{
+  color:var(--ink);
+  background:var(--cell-bg);
+}
+
+.action:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+
+.action.is-shake{
+  animation:shake .4s ease;
+}
+
+.coinpop{
+  position:absolute;
+  right:10px;
+  top:-4px;
+  color:var(--gold);
+  font-weight:700;
+  font-size:13px;
+  animation:coinFloat 1s ease-out forwards;
+  pointer-events:none;
+}
+
+@keyframes coinFloat{
+  0%{
+    opacity:0;
+    transform:translateY(0);
+  }
+  15%{
+    opacity:1;
+  }
+  100%{
+    opacity:0;
+    transform:translateY(-26px);
+  }
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .3s ease;
+}
+
+.modal.is-open{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.modal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.5);
+}
+
+.modal__card{
+  position:relative;
+  background:var(--card-2);
+  border-radius:12px;
+  padding:26px 24px 0;
+  text-align:center;
+  max-width:320px;
+  width:100%;
+  box-shadow:0 24px 50px -12px rgba(0,0,0,.6);
+  transform:translateY(8px) scale(.96);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  overflow:hidden;
+}
+
+.modal.is-open .modal__card{
+  transform:translateY(0) scale(1);
+}
+
+.modal__icon{
+  width:46px;
+  height:46px;
+  color:var(--gold);
+  margin:0 auto 12px;
+}
+
+.modal__icon svg{
+  width:100%;
+  height:100%;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.6;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.modal__title{
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:-.015em;
+  color:var(--ink);
+  margin-bottom:8px;
+  line-height:1.25;
+}
+
+.modal__sub{
+  font-size:14px;
+  color:var(--muted);
+  margin-bottom:20px;
+  line-height:1.45;
+}
+
+.modal__retry{
+  background:transparent;
+  border:none;
+  color:var(--accent);
+  font-size:16px;
+  font-weight:600;
+  letter-spacing:-.005em;
+  cursor:pointer;
+  padding:14px 24px;
+  width:100%;
+  border-top:1px solid var(--line-strong);
+  transition:color .15s ease;
+}
+
+.modal__retry:hover{
+  color:var(--ink);
+}
+
+.modal__retry:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:-2px;
+}
+
+@media (max-width:380px){
+  .stage{
+    padding:16px 12px;
+  }
+
+  .level{
+    padding:8px 13px;
+    font-size:12px;
+  }
+
+  .tile{
+    width:36px;
+    height:42px;
+    font-size:17px;
+  }
+
+  .slot{
+    width:34px;
+    height:40px;
+    font-size:17px;
+  }
+
+  .modal__title{
+    font-size:18px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<main class="stage">
+  <div class="card">
+
+    <div class="header">
+      <div class="header__text">
+        <div class="header__title">kyyinfinite Susun Kata</div>
+        <div class="header__sub">Susun huruf jadi kata</div>
+      </div>
+
+      <button
+        class="icon-btn"
+        id="soundToggle"
+        aria-label="Suara"
+        type="button">
+      </button>
+    </div>
+
+    <div class="status" aria-live="polite">
+
+      <div class="status__turn">
+        <span
+          class="status__indicator"
+          id="streakDot">
+        </span>
+
+        <span id="statusText">
+          Ronde 1 • Kata 1/5
+        </span>
+      </div>
+
+      <div
+        class="coin-badge"
+        id="coinBadge">
+
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/>
+          <circle cx="12" cy="12" r="4"/>
+        </svg>
+
+        <b id="coinCount">0</b>
+      </div>
+
+    </div>
+
+    <div class="timerbar">
+      <div
+        class="timerbar__fill"
+        id="timerFill">
+      </div>
+    </div>
+
+    <div class="clue">
+
+      <span
+        class="clue__icon"
+        id="clueIcon">
+      </span>
+
+      <span
+        class="clue__text"
+        id="clueText">
+        Memuat kata…
+      </span>
+
+    </div>
+
+    <div
+      class="slots"
+      id="slots"
+      role="group"
+      aria-label="Jawaban">
+    </div>
+
+    <div
+      class="tiles"
+      id="tiles"
+      role="group"
+      aria-label="Huruf tersedia">
+    </div>
+
+    <div class="levels">
+
+      <div class="levels__label">
+        Kategori
+      </div>
+
+      <div
+        class="levels__list"
+        id="levelsList"
+        role="radiogroup"
+        aria-label="Kategori kata">
+      </div>
+
+    </div>
+
+    <div class="footer">
+
+      <button
+        class="action"
+        id="btnShuffle"
+        type="button">
+      </button>
+
+      <button
+        class="action"
+        id="btnHint"
+        type="button">
+      </button>
+
+      <button
+        class="action"
+        id="btnSkip"
+        type="button">
+      </button>
+
+    </div>
+
+  </div>
+</main>
+
+<div
+  class="modal"
+  id="modal"
+  hidden>
+
+  <div
+    class="modal__backdrop"
+    id="modalBackdrop">
+  </div>
+
+  <div
+    class="modal__card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modalTitle">
+
+    <div class="modal__icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-3 1 .5 3 2 3 5a5 5 0 0 1-10 0c0-5 3-6 5-11z"/>
+      </svg>
+    </div>
+
+    <h2
+      class="modal__title"
+      id="modalTitle">
+      Ronde Selesai
+    </h2>
+
+    <p
+      class="modal__sub"
+      id="modalSub">
+      Kamu mengumpulkan koin.
+    </p>
+
+    <button
+      class="modal__retry"
+      id="modalRetry"
+      type="button">
+      Lanjut
+    </button>
+
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   ICONS
+========================================================= */
+
+const ICON = {
+
+  speakerOn:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M4 9v6h4l5 4V5L8 9H4z"/>'+
+    '<path d="M16 8a5 5 0 0 1 0 8"/>'+
+    '<path d="M18.6 5.4a9 9 0 0 1 0 13.2"/>'+
+    '</svg>',
+
+  speakerOff:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M4 9v6h4l5 4V5L8 9H4z"/>'+
+    '<path d="M16 9l5 6M21 9l-5 6"/>'+
+    '</svg>',
+
+  shuffle:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M3 6h3.5l8 12H19"/>'+
+    '<path d="M14.5 6H19"/>'+
+    '<path d="M16.5 3.5l3 2.5-3 2.5"/>'+
+    '<path d="M3 18h3.5l2.5-3.8"/>'+
+    '<path d="M16.5 21.5l3-2.5-3-2.5"/>'+
+    '</svg>',
+
+  hint:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M9 18h6"/>'+
+    '<path d="M10 21h4"/>'+
+    '<path d="M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.4 1 2.5h6c0-1.1.4-1.9 1-2.5A6 6 0 0 0 12 3z"/>'+
+    '</svg>',
+
+  skip:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M5 5l9 7-9 7V5z"/>'+
+    '<path d="M18 5v14"/>'+
+    '</svg>',
+
+  flame:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 0c0-1-.5-2-1-3 1 .5 3 2 3 5a5 5 0 0 1-10 0c0-5 3-6 5-11z"/>'+
+    '</svg>',
+
+  paw:
+    '<svg viewBox="0 0 24 24">'+
+    '<circle cx="7" cy="8" r="2"/>'+
+    '<circle cx="12" cy="5.5" r="2"/>'+
+    '<circle cx="17" cy="8" r="2"/>'+
+    '<path d="M7.5 13c0-2 2-3 4.5-3s4.5 1 4.5 3-2 5.5-4.5 5.5-4.5-3.5-4.5-5.5z"/>'+
+    '</svg>',
+
+  apple:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M12 8.5c-3.3 0-5.5 2.3-5.5 6S8.7 21 12 21s5.5-3 5.5-6.5-2.2-6-5.5-6z"/>'+
+    '<path d="M12 8.5c0-2 1.2-3.3 3-4.3"/>'+
+    '</svg>',
+
+  palette:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.6 2-1.8 0-.6-.3-1-.6-1.4-.3-.4-.6-.9-.6-1.4 0-1.1 1-1.9 2.1-1.9H17a4 4 0 0 0 4-4c0-4-4-7.5-9-7.5z"/>'+
+    '<circle cx="7.3" cy="10.8" r="1"/>'+
+    '<circle cx="9.5" cy="7" r="1"/>'+
+    '<circle cx="14.7" cy="7" r="1"/>'+
+    '<circle cx="17" cy="10.8" r="1"/>'+
+    '</svg>',
+
+  globe:
+    '<svg viewBox="0 0 24 24">'+
+    '<circle cx="12" cy="12" r="9"/>'+
+    '<path d="M3 12h18"/>'+
+    '<path d="M12 3c2.4 2.5 3.8 6 3.8 9s-1.4 6.5-3.8 9c-2.4-2.5-3.8-6-3.8-9s1.4-6.5 3.8-9z"/>'+
+    '</svg>',
+
+  cube:
+    '<svg viewBox="0 0 24 24">'+
+    '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/>'+
+    '<path d="M4 7.5l8 4.5 8-4.5"/>'+
+    '<path d="M12 12v9"/>'+
+    '</svg>'
+};
+
+
+/* =========================================================
+   WORD DATA
+========================================================= */
+
+const CATEGORIES = [
+
+  {
+    name:'Hewan',
+    icon:ICON.paw,
+    words:[
+      {
+        word:'KUCING',
+        hint:'Hewan peliharaan yang suka mengeong'
+      },
+      {
+        word:'ANJING',
+        hint:'Sahabat setia manusia, suka menggonggong'
+      },
+      {
+        word:'GAJAH',
+        hint:'Mamalia darat terbesar dengan belalai panjang'
+      },
+      {
+        word:'HARIMAU',
+        hint:'Kucing besar bergaris oranye dan hitam'
+      },
+      {
+        word:'KELINCI',
+        hint:'Bertelinga panjang dan suka melompat'
+      },
+      {
+        word:'BURUNG',
+        hint:'Berbulu dan bisa terbang di udara'
+      },
+      {
+        word:'SINGA',
+        hint:'Dijuluki raja hutan, punya surai lebat'
+      },
+      {
+        word:'ULAR',
+        hint:'Reptil tanpa kaki yang melata'
+      },
+      {
+        word:'KUDA',
+        hint:'Hewan tunggangan yang berlari kencang'
+      }
+    ]
+  },
+
+  {
+    name:'Buah',
+    icon:ICON.apple,
+    words:[
+      {
+        word:'APEL',
+        hint:'Buah renyah warna merah atau hijau'
+      },
+      {
+        word:'JERUK',
+        hint:'Buah asam manis kaya vitamin C'
+      },
+      {
+        word:'MANGGA',
+        hint:'Buah tropis manis warna kuning oranye'
+      },
+      {
+        word:'PISANG',
+        hint:'Buah melengkung kuning kesukaan monyet'
+      },
+      {
+        word:'ANGGUR',
+        hint:'Buah kecil bergerombol, bahan wine'
+      },
+      {
+        word:'DURIAN',
+        hint:'Berduri, berbau tajam, dijuluki raja buah'
+      },
+      {
+        word:'NANAS',
+        hint:'Bersisik dengan daun mahkota di atasnya'
+      },
+      {
+        word:'PEPAYA',
+        hint:'Oranye lembut, baik untuk pencernaan'
+      },
+      {
+        word:'MELON',
+        hint:'Bulat besar, daging hijau yang segar'
+      }
+    ]
+  },
+
+  {
+    name:'Warna',
+    icon:ICON.palette,
+    words:[
+      {
+        word:'MERAH',
+        hint:'Warna darah dan bendera pertama'
+      },
+      {
+        word:'BIRU',
+        hint:'Warna langit yang cerah'
+      },
+      {
+        word:'HIJAU',
+        hint:'Warna daun dan rerumputan'
+      },
+      {
+        word:'KUNING',
+        hint:'Warna matahari dan kulit pisang'
+      },
+      {
+        word:'UNGU',
+        hint:'Campuran warna merah dan biru'
+      },
+      {
+        word:'HITAM',
+        hint:'Warna paling gelap, lawan putih'
+      },
+      {
+        word:'PUTIH',
+        hint:'Warna salju, lawan dari hitam'
+      },
+      {
+        word:'COKLAT',
+        hint:'Warna kayu dan tanah'
+      },
+      {
+        word:'ORANYE',
+        hint:'Campuran warna merah dan kuning'
+      }
+    ]
+  },
+
+  {
+    name:'Negara',
+    icon:ICON.globe,
+    words:[
+      {
+        word:'INDONESIA',
+        hint:'Negara kepulauan terbesar di dunia'
+      },
+      {
+        word:'JEPANG',
+        hint:'Negara matahari terbit di Asia'
+      },
+      {
+        word:'KOREA',
+        hint:'Negara asal K-Pop dan kimchi'
+      },
+      {
+        word:'PRANCIS',
+        hint:'Negara yang punya menara Eiffel'
+      },
+      {
+        word:'JERMAN',
+        hint:'Negara Eropa terkenal mobil dan bir'
+      },
+      {
+        word:'INGGRIS',
+        hint:'Negara asal sepak bola modern'
+      },
+      {
+        word:'BRASIL',
+        hint:'Negara Amerika Selatan, jawara Piala Dunia'
+      },
+      {
+        word:'MESIR',
+        hint:'Negara piramida di benua Afrika'
+      },
+      {
+        word:'KANADA',
+        hint:'Negara berbendera daun maple'
+      }
+    ]
+  },
+
+  {
+    name:'Benda',
+    icon:ICON.cube,
+    words:[
+      {
+        word:'MEJA',
+        hint:'Perabot untuk menaruh barang atau makan'
+      },
+      {
+        word:'KURSI',
+        hint:'Tempat duduk berkaki empat'
+      },
+      {
+        word:'LAMPU',
+        hint:'Alat untuk menerangi ruangan'
+      },
+      {
+        word:'JENDELA',
+        hint:'Lubang berkaca untuk melihat keluar rumah'
+      },
+      {
+        word:'PINTU',
+        hint:'Tempat keluar masuk ruangan'
+      },
+      {
+        word:'CERMIN',
+        hint:'Benda kaca untuk melihat pantulan diri'
+      },
+      {
+        word:'BUKU',
+        hint:'Kumpulan halaman berisi tulisan untuk dibaca'
+      },
+      {
+        word:'PENSIL',
+        hint:'Alat tulis berujung grafit'
+      },
+      {
+        word:'GELAS',
+        hint:'Wadah yang dipakai untuk minum'
+      }
+    ]
+  }
+
+];
+
+const ROUND_LENGTH = 5;
+
+
+/* =========================================================
+   SAFE STORAGE
+========================================================= */
+
+function safeStorageGet(key,fallback){
+
+  try{
+
+    if(
+      typeof window==='undefined' ||
+      !window.localStorage
+    ){
+      return fallback;
+    }
+
+    const value=window.localStorage.getItem(key);
+
+    return value===null ? fallback : value;
+
+  }catch(e){
+
+    return fallback;
+
+  }
+
+}
+
+function safeStorageSet(key,value){
+
+  try{
+
+    if(
+      typeof window==='undefined' ||
+      !window.localStorage
+    ){
+      return false;
+    }
+
+    window.localStorage.setItem(key,String(value));
+
+    return true;
+
+  }catch(e){
+
+    return false;
+
+  }
+
+}
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let savedCoins=Number(
+  safeStorageGet('kyy_susunkata_coins','0')
+);
+
+if(!Number.isFinite(savedCoins)||savedCoins<0){
+  savedCoins=0;
+}
+
+const state={
+
+  categoryIndex:0,
+
+  category:CATEGORIES[0],
+
+  queue:[],
+
+  currentWord:null,
+
+  letters:[],
+
+  slots:[],
+
+  timeLeft:0,
+
+  maxTime:0,
+
+  timerHandle:null,
+
+  round:0,
+
+  wordIndex:0,
+
+  roundScore:0,
+
+  streak:0,
+
+  coins:Math.floor(savedCoins),
+
+  soundOn:
+    safeStorageGet('kyy_susunkata_sound','1')!=='0'
+
+};
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const $=id=>document.getElementById(id);
+
+const slotsEl=$('slots');
+const tilesEl=$('tiles');
+const levelsList=$('levelsList');
+
+const clueTextEl=$('clueText');
+const clueIconEl=$('clueIcon');
+
+const statusTextEl=$('statusText');
+const streakDotEl=$('streakDot');
+
+const coinCountEl=$('coinCount');
+const coinBadge=$('coinBadge');
+
+const timerFill=$('timerFill');
+
+const soundToggle=$('soundToggle');
+
+const btnShuffle=$('btnShuffle');
+const btnHint=$('btnHint');
+const btnSkip=$('btnSkip');
+
+const modal=$('modal');
+const modalTitle=$('modalTitle');
+const modalSub=$('modalSub');
+const modalRetry=$('modalRetry');
+
+const modalBackdrop=$('modalBackdrop');
+
+
+/* =========================================================
+   INITIAL UI
+========================================================= */
+
+btnShuffle.innerHTML=
+  ICON.shuffle+
+  '<span>Acak</span>';
+
+btnHint.innerHTML=
+  ICON.hint+
+  '<span>Petunjuk</span>';
+
+btnSkip.innerHTML=
+  ICON.skip+
+  '<span>Lewati</span>';
+
+streakDotEl.innerHTML=ICON.flame;
+
+
+/* =========================================================
+   SOUND
+========================================================= */
+
+let audioCtx=null;
+
+function ensureAudio(){
+
+  if(audioCtx){
+    return audioCtx;
+  }
+
+  const AudioCtor=
+    window.AudioContext||
+    window.webkitAudioContext;
+
+  if(!AudioCtor){
+    return null;
+  }
+
+  try{
+
+    audioCtx=new AudioCtor();
+
+    if(audioCtx.state==='suspended'){
+
+      const promise=audioCtx.resume();
+
+      if(
+        promise &&
+        typeof promise.catch==='function'
+      ){
+        promise.catch(()=>{
+          audioCtx=null;
+        });
+      }
+
+    }
+
+    return audioCtx;
+
+  }catch(e){
+
+    audioCtx=null;
+
+    return null;
+
+  }
+
+}
+
+function tone(
+  freq,
+  start,
+  duration,
+  type,
+  peak
+){
+
+  if(!state.soundOn){
+    return;
+  }
+
+  const ac=ensureAudio();
+
+  if(!ac){
+    return;
+  }
+
+  try{
+
+    const t0=
+      ac.currentTime+
+      start;
+
+    const osc=
+      ac.createOscillator();
+
+    const gain=
+      ac.createGain();
+
+    osc.type=type;
+
+    osc.frequency.setValueAtTime(
+      freq,
+      t0
+    );
+
+    gain.gain.setValueAtTime(
+      0,
+      t0
+    );
+
+    gain.gain.linearRampToValueAtTime(
+      peak,
+      t0+0.018
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      t0+duration
+    );
+
+    osc.connect(gain);
+
+    gain.connect(
+      ac.destination
+    );
+
+    osc.start(t0);
+
+    osc.stop(
+      t0+
+      duration+
+      0.03
+    );
+
+  }catch(e){}
+
+}
+
+const sfx={
+
+  tap:()=>{
+    tone(
+      520,
+      0,
+      0.07,
+      'sine',
+      0.10
+    );
+  },
+
+  correct:()=>{
+    tone(
+      660,
+      0,
+      0.12,
+      'triangle',
+      0.15
+    );
+
+    tone(
+      880,
+      0.1,
+      0.14,
+      'triangle',
+      0.15
+    );
+
+    tone(
+      1108,
+      0.2,
+      0.18,
+      'triangle',
+      0.17
+    );
+  },
+
+  wrong:()=>{
+    tone(
+      190,
+      0,
+      0.16,
+      'sawtooth',
+      0.16
+    );
+
+    tone(
+      130,
+      0.09,
+      0.2,
+      'sawtooth',
+      0.14
+    );
+  },
+
+  coin:()=>{
+    tone(
+      1200,
+      0,
+      0.06,
+      'square',
+      0.10
+    );
+
+    tone(
+      1600,
+      0.05,
+      0.1,
+      'square',
+      0.10
+    );
+  },
+
+  round:()=>{
+    tone(
+      523,
+      0,
+      0.12,
+      'triangle',
+      0.14
+    );
+
+    tone(
+      659,
+      0.12,
+      0.12,
+      'triangle',
+      0.14
+    );
+
+    tone(
+      784,
+      0.24,
+      0.12,
+      'triangle',
+      0.14
+    );
+
+    tone(
+      1047,
+      0.36,
+      0.26,
+      'triangle',
+      0.17
+    );
+  },
+
+  hint:()=>{
+    tone(
+      410,
+      0,
+      0.09,
+      'sine',
+      0.09
+    );
+
+    tone(
+      520,
+      0.08,
+      0.12,
+      'sine',
+      0.09
+    );
+  }
+
+};
+
+function renderSoundIcon(){
+
+  soundToggle.innerHTML=
+    state.soundOn
+      ? ICON.speakerOn
+      : ICON.speakerOff;
+
+}
+
+soundToggle.addEventListener(
+  'click',
+  ()=>{
+
+    state.soundOn=
+      !state.soundOn;
+
+    safeStorageSet(
+      'kyy_susunkata_sound',
+      state.soundOn?'1':'0'
+    );
+
+    renderSoundIcon();
+
+    if(state.soundOn){
+      sfx.tap();
+    }
+
+  }
+);
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function shuffleArr(arr){
+
+  const a=arr.slice();
+
+  for(
+    let i=a.length-1;
+    i>0;
+    i--
+  ){
+
+    const j=
+      Math.floor(
+        Math.random()*(i+1)
+      );
+
+    [
+      a[i],
+      a[j]
+    ]=[
+      a[j],
+      a[i]
+    ];
+
+  }
+
+  return a;
+
+}
+
+function scrambleWord(word){
+
+  const base=
+    word
+      .split('')
+      .map(
+        (c,i)=>({
+          id:i,
+          char:c,
+          placed:false
+        })
+      );
+
+  let arr;
+
+  let attempts=0;
+
+  do{
+
+    arr=
+      shuffleArr(base)
+      .map(
+        l=>({
+          id:l.id,
+          char:l.char,
+          placed:false
+        })
+      );
+
+    attempts++;
+
+    if(attempts>20){
+      break;
+    }
+
+  }while(
+    word.length>1 &&
+    arr.map(
+      l=>l.char
+    ).join('')===word
+  );
+
+  return arr;
+
+}
+
+function saveCoins(){
+
+  safeStorageSet(
+    'kyy_susunkata_coins',
+    state.coins
+  );
+
+}
+
+
+/* =========================================================
+   LEVELS
+========================================================= */
+
+function buildLevels(){
+
+  levelsList.innerHTML='';
+
+  CATEGORIES.forEach(
+    (cat,i)=>{
+
+      const b=
+        document.createElement(
+          'button'
+        );
+
+      b.type='button';
+
+      b.className=
+        'level'+
+        (
+          i===state.categoryIndex
+            ? ' is-active'
+            : ''
+        );
+
+      b.setAttribute(
+        'role',
+        'radio'
+      );
+
+      b.setAttribute(
+        'aria-checked',
+        i===state.categoryIndex
+          ? 'true'
+          : 'false'
+      );
+
+      b.innerHTML=
+        cat.icon+
+        '<span>'+
+        cat.name+
+        '</span>';
+
+      b.addEventListener(
+        'click',
+        ()=>{
+          selectCategory(i);
+        }
+      );
+
+      levelsList.appendChild(b);
+
+    }
+  );
+
+}
+
+function selectCategory(i){
+
+  if(
+    !CATEGORIES[i]
+  ){
+    return;
+  }
+
+  clearTimer();
+
+  state.categoryIndex=i;
+
+  state.category=
+    CATEGORIES[i];
+
+  document
+    .querySelectorAll('.level')
+    .forEach(
+      (el,idx)=>{
+
+        const on=
+          idx===i;
+
+        el.classList.toggle(
+          'is-active',
+          on
+        );
+
+        el.setAttribute(
+          'aria-checked',
+          on?'true':'false'
+        );
+
+      }
+    );
+
+  startRound();
+
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function renderTiles(){
+
+  tilesEl.innerHTML='';
+
+  state.letters.forEach(
+    l=>{
+
+      const b=
+        document.createElement(
+          'button'
+        );
+
+      b.type='button';
+
+      b.className=
+        'tile'+
+        (
+          l.placed
+            ? ' is-placed'
+            : ''
+        );
+
+      b.textContent=l.char;
+
+      b.disabled=l.placed;
+
+      b.addEventListener(
+        'click',
+        ()=>{
+          onTileClick(l.id);
+        }
+      );
+
+      tilesEl.appendChild(b);
+
+    }
+  );
+
+}
+
+function renderSlots(){
+
+  slotsEl.innerHTML='';
+
+  state.slots.forEach(
+    (s,i)=>{
+
+      const d=
+        document.createElement(
+          'div'
+        );
+
+      d.className=
+        'slot'+
+        (
+          s
+            ? ' is-filled'
+            : ''
+        );
+
+      d.textContent=
+        s
+          ? s.char
+          : '';
+
+      if(s){
+
+        d.addEventListener(
+          'click',
+          ()=>{
+            onSlotClick(i);
+          }
+        );
+
+      }
+
+      slotsEl.appendChild(d);
+
+    }
+  );
+
+}
+
+function updateHeader(){
+
+  coinCountEl.textContent=
+    String(state.coins);
+
+  const wNum=
+    Math.min(
+      state.wordIndex+1,
+      ROUND_LENGTH
+    );
+
+  statusTextEl.textContent=
+    'Ronde '+
+    state.round+
+    ' • Kata '+
+    wNum+
+    '/'+
+    ROUND_LENGTH;
+
+  streakDotEl.classList.toggle(
+    'is-hot',
+    state.streak>=3
+  );
+
+}
+
+function updateTimerBar(){
+
+  if(
+    !state.maxTime ||
+    state.maxTime<=0
+  ){
+
+    timerFill.style.width='0%';
+
+    return;
+
+  }
+
+  const pct=
+    Math.max(
+      0,
+      Math.min(
+        100,
+        state.timeLeft/
+        state.maxTime*
+        100
+      )
+    );
+
+  timerFill.style.width=
+    pct+'%';
+
+  timerFill.classList.toggle(
+    'is-low',
+    pct<30
+  );
+
+}
+
+function popCoin(amount){
+
+  const el=
+    document.createElement(
+      'span'
+    );
+
+  el.className='coinpop';
+
+  el.textContent=
+    '+'+
+    amount;
+
+  coinBadge.appendChild(el);
+
+  setTimeout(
+    ()=>{
+      if(el.parentNode){
+        el.remove();
+      }
+    },
+    1000
+  );
+
+}
+
+
+/* =========================================================
+   TIMER
+========================================================= */
+
+function clearTimer(){
+
+  if(state.timerHandle){
+
+    clearInterval(
+      state.timerHandle
+    );
+
+    state.timerHandle=null;
+
+  }
+
+}
+
+function startTimer(){
+
+  clearTimer();
+
+  state.timeLeft=
+    state.maxTime;
+
+  updateTimerBar();
+
+  state.timerHandle=
+    setInterval(
+      ()=>{
+
+        state.timeLeft-=0.1;
+
+        if(
+          state.timeLeft<=0
+        ){
+
+          state.timeLeft=0;
+
+          updateTimerBar();
+
+          clearTimer();
+
+          timeUp();
+
+          return;
+
+        }
+
+        updateTimerBar();
+
+      },
+      100
+    );
+
+}
+
+
+/* =========================================================
+   GAME FLOW
+========================================================= */
+
+function startRound(){
+
+  clearTimer();
+
+  state.round=
+    (state.round||0)+1;
+
+  state.wordIndex=0;
+
+  state.roundScore=0;
+
+  state.streak=0;
+
+  state.queue=
+    shuffleArr(
+      state.category.words
+    );
+
+  hideModal();
+
+  nextWord();
+
+}
+
+function nextWord(){
+
+  clearTimer();
+
+  slotsEl.classList.remove(
+    'is-correct',
+    'is-wrong'
+  );
+
+  if(
+    state.wordIndex>=ROUND_LENGTH
+  ){
+
+    showRoundModal();
+
+    return;
+
+  }
+
+  if(
+    state.queue.length===0
+  ){
+
+    state.queue=
+      shuffleArr(
+        state.category.words
+      );
+
+  }
+
+  state.currentWord=
+    state.queue.pop();
+
+  if(
+    !state.currentWord
+  ){
+
+    state.wordIndex++;
+
+    nextWord();
+
+    return;
+
+  }
+
+  state.letters=
+    scrambleWord(
+      state.currentWord.word
+    );
+
+  state.slots=
+    new Array(
+      state.currentWord.word.length
+    ).fill(null);
+
+  state.maxTime=
+    8+
+    state.currentWord.word.length*
+    1.6;
+
+  state.timeLeft=
+    state.maxTime;
+
+  clueTextEl.textContent=
+    state.currentWord.hint;
+
+  clueIconEl.innerHTML=
+    state.category.icon;
+
+  renderTiles();
+
+  renderSlots();
+
+  updateHeader();
+
+  startTimer();
+
+}
+
+function onTileClick(id){
+
+  const letter=
+    state.letters.find(
+      l=>l.id===id
+    );
+
+  if(
+    !letter||
+    letter.placed
+  ){
+    return;
+  }
+
+  const idx=
+    state.slots.findIndex(
+      s=>s===null
+    );
+
+  if(idx===-1){
+    return;
+  }
+
+  state.slots[idx]={
+    id:letter.id,
+    char:letter.char
+  };
+
+  letter.placed=true;
+
+  sfx.tap();
+
+  renderTiles();
+
+  renderSlots();
+
+  if(
+    state.slots.every(
+      s=>s!==null
+    )
+  ){
+
+    setTimeout(
+      checkAnswer,
+      200
+    );
+
+  }
+
+}
+
+function onSlotClick(idx){
+
+  if(
+    !state.slots[idx]
+  ){
+    return;
+  }
+
+  const removed=
+    state.slots[idx];
+
+  for(
+    let j=idx;
+    j<state.slots.length-1;
+    j++
+  ){
+
+    state.slots[j]=
+      state.slots[j+1];
+
+  }
+
+  state.slots[
+    state.slots.length-1
+  ]=null;
+
+  const letter=
+    state.letters.find(
+      l=>l.id===removed.id
+    );
+
+  if(letter){
+    letter.placed=false;
+  }
+
+  slotsEl.classList.remove(
+    'is-correct',
+    'is-wrong'
+  );
+
+  sfx.tap();
+
+  renderTiles();
+
+  renderSlots();
+
+}
+
+function checkAnswer(){
+
+  if(
+    !state.currentWord
+  ){
+    return;
+  }
+
+  const guess=
+    state.slots
+      .map(
+        s=>s?s.char:''
+      )
+      .join('');
+
+  if(
+    guess===
+    state.currentWord.word
+  ){
+
+    correctAnswer();
+
+  }else{
+
+    wrongAnswer();
+
+  }
+
+}
+
+function correctAnswer(){
+
+  clearTimer();
+
+  slotsEl.classList.remove(
+    'is-wrong'
+  );
+
+  slotsEl.classList.add(
+    'is-correct'
+  );
+
+  const bonusTime=
+    Math.ceil(
+      state.timeLeft
+    );
+
+  const earned=
+    5+
+    Math.floor(
+      bonusTime/2
+    )+
+    state.streak*2;
+
+  state.streak++;
+
+  state.coins+=earned;
+
+  state.roundScore+=earned;
+
+  saveCoins();
+
+  sfx.correct();
+
+  setTimeout(
+    sfx.coin,
+    150
+  );
+
+  updateHeader();
+
+  popCoin(earned);
+
+  setTimeout(
+    ()=>{
+
+      state.wordIndex++;
+
+      nextWord();
+
+    },
+    900
+  );
+
+}
+
+function wrongAnswer(){
+
+  if(
+    !state.currentWord
+  ){
+    return;
+  }
+
+  clearTimer();
+
+  slotsEl.classList.remove(
+    'is-wrong'
+  );
+
+  void slotsEl.offsetWidth;
+
+  slotsEl.classList.add(
+    'is-wrong'
+  );
+
+  sfx.wrong();
+
+  state.streak=0;
+
+  updateHeader();
+
+  setTimeout(
+    ()=>{
+
+      slotsEl.classList.remove(
+        'is-wrong'
+      );
+
+      state.slots.forEach(
+        s=>{
+
+          if(s){
+
+            const l=
+              state.letters.find(
+                x=>x.id===s.id
+              );
+
+            if(l){
+              l.placed=false;
+            }
+
+          }
+
+        }
+      );
+
+      state.slots=
+        new Array(
+          state.currentWord.word.length
+        ).fill(null);
+
+      renderTiles();
+
+      renderSlots();
+
+      startTimer();
+
+    },
+    500
+  );
+
+}
+
+function timeUp(){
+
+  if(
+    !state.currentWord
+  ){
+    return;
+  }
+
+  clearTimer();
+
+  slotsEl.classList.remove(
+    'is-wrong'
+  );
+
+  void slotsEl.offsetWidth;
+
+  slotsEl.classList.add(
+    'is-wrong'
+  );
+
+  sfx.wrong();
+
+  state.streak=0;
+
+  updateHeader();
+
+  setTimeout(
+    ()=>{
+
+      state.wordIndex++;
+
+      nextWord();
+
+    },
+    700
+  );
+
+}
+
+function showRoundModal(){
+
+  clearTimer();
+
+  modalTitle.textContent=
+    'Ronde Selesai';
+
+  modalSub.textContent=
+    'Kamu mengumpulkan '+
+    state.roundScore+
+    ' koin di ronde ini. Total koin: '+
+    state.coins+
+    '.';
+
+  sfx.round();
+
+  modal.hidden=false;
+
+  void modal.offsetWidth;
+
+  modal.classList.add(
+    'is-open'
+  );
+
+  setTimeout(
+    ()=>{
+      try{
+        modalRetry.focus();
+      }catch(e){}
+    },
+    80
+  );
+
+}
+
+function hideModal(){
+
+  modal.classList.remove(
+    'is-open'
+  );
+
+  setTimeout(
+    ()=>{
+
+      if(
+        !modal.classList.contains(
+          'is-open'
+        )
+      ){
+        modal.hidden=true;
+      }
+
+    },
+    350
+  );
+
+}
+
+
+/* =========================================================
+   FOOTER ACTIONS
+========================================================= */
+
+btnShuffle.addEventListener(
+  'click',
+  ()=>{
+
+    if(
+      !state.letters.length
+    ){
+      return;
+    }
+
+    const empty=
+      state.letters.filter(
+        l=>!l.placed
+      );
+
+    const shuffled=
+      shuffleArr(empty);
+
+    let k=0;
+
+    state.letters=
+      state.letters.map(
+        l=>
+          l.placed
+            ? l
+            : shuffled[k++]
+      );
+
+    sfx.tap();
+
+    renderTiles();
+
+  }
+);
+
+
+btnHint.addEventListener(
+  'click',
+  ()=>{
+
+    if(
+      !state.currentWord
+    ){
+      return;
+    }
+
+    if(
+      state.coins<10
+    ){
+
+      btnHint.classList.add(
+        'is-shake'
+      );
+
+      setTimeout(
+        ()=>{
+          btnHint.classList.remove(
+            'is-shake'
+          );
+        },
+        400
+      );
+
+      return;
+
+    }
+
+    const emptyIdx=
+      state.slots.findIndex(
+        s=>s===null
+      );
+
+    if(
+      emptyIdx===-1
+    ){
+      return;
+    }
+
+    const correctChar=
+      state.currentWord.word[
+        emptyIdx
+      ];
+
+    const letter=
+      state.letters.find(
+        l=>
+          !l.placed&&
+          l.char===correctChar
+      );
+
+    if(!letter){
+
+      return;
+
+    }
+
+    state.coins-=10;
+
+    saveCoins();
+
+    state.slots[
+      emptyIdx
+    ]={
+      id:letter.id,
+      char:letter.char
+    };
+
+    letter.placed=true;
+
+    sfx.hint();
+
+    updateHeader();
+
+    renderTiles();
+
+    renderSlots();
+
+    if(
+      state.slots.every(
+        s=>s!==null
+      )
+    ){
+
+      setTimeout(
+        checkAnswer,
+        200
+      );
+
+    }
+
+  }
+);
+
+
+btnSkip.addEventListener(
+  'click',
+  ()=>{
+
+    clearTimer();
+
+    state.streak=0;
+
+    updateHeader();
+
+    state.wordIndex++;
+
+    nextWord();
+
+  }
+);
+
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+modalRetry.addEventListener(
+  'click',
+  ()=>{
+    startRound();
+  }
+);
+
+modalBackdrop.addEventListener(
+  'click',
+  ()=>{
+    startRound();
+  }
+);
+
+document.addEventListener(
+  'keydown',
+  e=>{
+
+    if(
+      !modal.classList.contains(
+        'is-open'
+      )
+    ){
+      return;
+    }
+
+    if(
+      e.key==='Escape'||
+      e.key==='Enter'
+    ){
+
+      e.preventDefault();
+
+      startRound();
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   INIT
+========================================================= */
+
+renderSoundIcon();
+
+buildLevels();
+
+updateHeader();
+
+startRound();
+
+})();
+</script>
+
+</body>
+</html>

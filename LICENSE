@@ -1,0 +1,19 @@
+
+Nanti README bisa kita bikin lebih bagus dengan screenshot, architecture diagram, fitur, dan contoh plugin.
+
+---
+
+# 5. `LICENSE`
+
+Kalau memang kamu ingin orang lain bebas menggunakan base, pilih lisensi.
+
+Untuk base seperti ini saya cenderung menyarankan:
+
+### MIT
+
+Simple dan permissive.
+
+Buat:
+
+```text
+LICENSE
