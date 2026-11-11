@@ -1,0 +1,21 @@
+{
+  "botName": "kyyinfinite",
+  "ownerName": "Your Name",
+  "creator": [
+    "628xxxxxxxxxx"
+  ],
+  "prefix": [
+    ".",
+    "#",
+    "!",
+    "/"
+  ],
+  "botMode": "public",
+  "dailyLimit": 10,
+  "usePairingCode": true,
+  "accessDenied": {
+    "owner": "Perintah ini hanya dapat digunakan oleh owner.",
+    "creator": "Perintah ini hanya dapat digunakan oleh creator.",
+    "premium": "Perintah ini hanya dapat digunakan oleh pengguna premium."
+  }
+}
