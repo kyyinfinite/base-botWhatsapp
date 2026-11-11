@@ -24,7 +24,7 @@ fs.writeFileSync(process.env.WA_CONFIG_PATH, JSON.stringify({
 
 const connectUrl = pathToFileURL(path.join(root, 'src/core/app/connect.js')).href
 const { default: connectToWhatsApp, closeActiveSocket, getActiveSocket, getConnectionStatus } = await import(connectUrl)
-const { classifyDisconnect, computeBackoff, reconnectDelayFor } = await import('../src/core/app/reconnect.js')
+const { classifyDisconnect, computeBackoff, reconnectDelayFor, describeDisconnect } = await import('../src/core/app/reconnect.js')
 const { flushAll } = await import('../src/services/database/json.js')
 
 const flush = () => new Promise(resolve => setImmediate(resolve))
@@ -182,13 +182,28 @@ describe('klasifikasi status disconnect', () => {
         assert.deepEqual(classifyDisconnect(401), { type: 'logout', reconnect: false })
         assert.deepEqual(classifyDisconnect(440), { type: 'replaced', reconnect: true })
         for (const code of [408, 428, 503]) assert.equal(classifyDisconnect(code).type, 'transient')
-        for (const code of [undefined, null, 500, 999]) assert.deepEqual(classifyDisconnect(code), { type: 'unknown', reconnect: true })
+        assert.deepEqual(classifyDisconnect(500), { type: 'badSession', reconnect: true })
+        assert.deepEqual(classifyDisconnect(403), { type: 'forbidden', reconnect: false })
+        assert.deepEqual(classifyDisconnect(411), { type: 'multideviceMismatch', reconnect: false })
+        for (const code of [undefined, null, 999]) assert.deepEqual(classifyDisconnect(code), { type: 'unknown', reconnect: true })
+    })
+
+    test('deskripsi disconnect tersedia untuk semua tipe klasifikasi', () => {
+        for (const type of ['restart', 'logout', 'forbidden', 'multideviceMismatch', 'badSession', 'replaced', 'transient']) {
+            const text = describeDisconnect(type, 500)
+            assert.equal(typeof text, 'string')
+            assert.ok(text.length > 0)
+            assert.notEqual(text, 'penyebab tidak diketahui')
+        }
+        assert.equal(describeDisconnect('unknown', 999), 'penyebab tidak diketahui')
     })
 
     test('515 selalu 0ms, status lain memakai backoff dengan batas delay', () => {
         for (let attempt = 0; attempt < 40; attempt++) assert.equal(reconnectDelayFor('restart', attempt), 0)
         assert.ok(reconnectDelayFor('transient', 0) >= 2000)
         assert.ok(reconnectDelayFor('transient', 500) <= 60000 + 500)
+        assert.ok(reconnectDelayFor('badSession', 0) >= 2000)
+        assert.ok(reconnectDelayFor('badSession', 500) <= 60000 + 500)
         assert.ok(reconnectDelayFor('replaced', 0) >= 30000)
         assert.ok(reconnectDelayFor('replaced', 500) <= 300000 + 5000)
         assert.ok(Number.isFinite(computeBackoff(10_000)))
@@ -548,6 +563,41 @@ describe('strategi per status', () => {
         mock.timers.tick(501)
         await flush()
         assert.equal(h.created, 2)
+    })
+
+    test('403 dan 411 berhenti reconnect dengan instruksi pairing ulang', async () => {
+        for (const code of [403, 411]) {
+            const h = makeHarness({ registered: true })
+            const sock = await h.connect()
+            await sock.ev.emit('connection.update', { connection: 'open' })
+            await sock.ev.emit('connection.update', closeWith(code))
+
+            mock.timers.tick(600000)
+            await flush()
+
+            assert.equal(h.created, 1, `status ${code} tidak membuat socket baru`)
+            assert.equal(getConnectionStatus().loggedOut, true)
+            assert.equal(getConnectionStatus().reconnectScheduled, false)
+            assert.ok(logs.some(line => line.includes('Hapus folder session')))
+            assert.ok(logs.some(line => line.includes(`status ${code}`)))
+        }
+    })
+
+    test('500 memakai backoff dengan pesan penyelamatan sesi', async () => {
+        const h = makeHarness({ registered: true })
+        const sock = await h.connect()
+        await sock.ev.emit('connection.update', closeWith(500))
+
+        mock.timers.tick(1999)
+        await flush()
+        assert.equal(h.created, 1)
+
+        mock.timers.tick(501)
+        await flush()
+        assert.equal(h.created, 2)
+
+        assert.ok(logs.some(line => line.includes('status 500')))
+        assert.ok(logs.some(line => line.includes('sesi tidak valid')))
     })
 
     test('log reconnect yang sama tidak membanjiri terminal', async () => {

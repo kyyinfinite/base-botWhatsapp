@@ -1,4 +1,4 @@
-import { jidNormalizedUser, getContentType, areJidsSameUser } from '@whiskeysockets/baileys'
+import { jidNormalizedUser, getContentType, areJidsSameUser, normalizeMessageContent } from '@whiskeysockets/baileys'
 import axios from 'axios'
 import moment from 'moment-timezone'
 import { sizeFormatter } from 'human-readable'
@@ -16,11 +16,17 @@ export const processTime = (timestamp, now) =>
 
 export const getRandom = (ext) => `${Math.floor(Math.random() * 10000)}${ext}`
 
+const HTTP_TIMEOUT_MS = 30000
+const HTTP_MAX_BYTES = 50 * 1024 * 1024
+
 export const getBuffer = async (url, options = {}) => {
     const res = await axios({
         method: 'get',
         url,
         headers: { 'DNT': 1, 'Upgrade-Insecure-Request': 1 },
+        timeout: HTTP_TIMEOUT_MS,
+        maxContentLength: HTTP_MAX_BYTES,
+        maxBodyLength: HTTP_MAX_BYTES,
         ...options,
         responseType: 'arraybuffer'
     })
@@ -28,7 +34,14 @@ export const getBuffer = async (url, options = {}) => {
 }
 
 export const fetchJson = async (url, options = {}) => {
-    const res = await axios({ method: 'GET', url, ...options })
+    const res = await axios({
+        method: 'GET',
+        url,
+        timeout: HTTP_TIMEOUT_MS,
+        maxContentLength: HTTP_MAX_BYTES,
+        maxBodyLength: HTTP_MAX_BYTES,
+        ...options
+    })
     return res.data
 }
 
@@ -95,8 +108,6 @@ export const smsg = (conn, m, store) => {
         m.fromMe = m.key.fromMe
         m.isGroup = !!m.chat?.endsWith('@g.us')
 
-        // Keep alternate PN/LID forms exposed by Baileys v7. Access control
-        // can use these together with signalRepository.lidMapping.
         m.remoteJid = m.chat
         m.remoteJidAlt = decode(m.key.remoteJidAlt)
         m.participant = decode(m.key.participant)
@@ -109,14 +120,16 @@ export const smsg = (conn, m, store) => {
     }
 
     if (m.message) {
-        m.mtype = getContentType(m.message)
-        m.msg = m.message[m.mtype]
-        m.text = m.msg?.text || m.msg?.caption || m.message.conversation || ''
+        const content = normalizeMessageContent(m.message) || m.message
+        m.mtype = getContentType(content)
+        m.msg = content[m.mtype]
+        m.text = m.msg?.text || m.msg?.caption || content.conversation || ''
 
         const quoted = m.msg?.contextInfo?.quotedMessage
         if (quoted) {
-            const type = getContentType(quoted)
-            const content = quoted[type]
+            const unwrapped = normalizeMessageContent(quoted) || quoted
+            const type = getContentType(unwrapped)
+            const content = unwrapped[type]
             
             m.quoted = (content && typeof content === 'object')
                 ? content

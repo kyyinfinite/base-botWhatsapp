@@ -7,6 +7,7 @@ import { getConfiguredNumbers, toNumber, toUserJid } from '../../utils/identity.
 import { captureFromMessage, captureFromGroupMetadata, resolveSenderIdentity } from '../../services/identity-resolver.js'
 import { owners, premiums } from '../../services/access.js'
 import { getConfig } from '../../services/config.js'
+import { getCachedGroupMetadata } from '../../services/group-cache.js'
 import { upsertUser } from '../../services/database/users.js'
 import { getGroup, upsertGroup } from '../../services/database/groups.js'
 import { messageQueue } from '../queue/engine.js'
@@ -29,8 +30,6 @@ async function executePlugin(handler, m, context) {
             accessDenied: context.accessDenied,
             context
         })
-
-        context._limitCommit?.()
 
         return { ok: true, result }
     } catch (error) {
@@ -95,7 +94,10 @@ async function processMessage(conn, m, config) {
     if (!middleware.allowed) return
 
     const outcome = await executePlugin(handler, m, context)
-    if (!outcome.ok) context._cooldownRelease?.()
+    if (!outcome.ok) {
+        context._limitRefund?.()
+        context._cooldownRelease?.()
+    }
 }
 
 export default async function handleMessage(conn, m) {
@@ -148,7 +150,7 @@ export default async function handleMessage(conn, m) {
 
             if (!existingGroup?.name) {
                 try {
-                    const metadata = await conn.groupMetadata(m.chat)
+                    const metadata = await getCachedGroupMetadata(m.chat, conn)
                     groupName = metadata?.subject || groupName
                     await captureFromGroupMetadata(metadata).catch(() => {})
                 } catch (e) {

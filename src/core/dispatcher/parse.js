@@ -50,6 +50,7 @@ export function matchPatternPlugin(m, patternPlugins) {
         if (!customPrefix) continue
 
         const anchored = customPrefix.source.startsWith('^')
+        customPrefix.lastIndex = 0
         if (!customPrefix.test(text)) continue
 
         if (anchored) return handler

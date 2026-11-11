@@ -13,7 +13,7 @@ fs.writeFileSync(process.env.WA_CONFIG_PATH, JSON.stringify({ dailyLimit: 5, bot
 
 const { runMiddleware, useMiddleware, getMiddlewares } = await import('../src/core/middleware/engine.js')
 const { clearCooldowns, checkCooldown, commitCooldown, releaseCooldown, getCooldownKey } = await import('../src/core/middleware/cooldown.js')
-const { upsertUser } = await import('../src/services/database/users.js')
+const { upsertUser, getUser } = await import('../src/services/database/users.js')
 const { flushAll } = await import('../src/services/database/json.js')
 
 const makeCtx = (overrides = {}) => {
@@ -237,18 +237,54 @@ describe('middleware engine', () => {
         const ctx = makeCtx({ user: { limit: 1 } })
         const result = await runMiddleware(ctx, makeHandler({ limit: 3 }))
         assert.equal(result.allowed, false)
-        assert.equal(ctx._limitCommit, undefined)
+        assert.equal(ctx._limitRefund, undefined)
     })
 
-    test('limit mengurangi limit saat commit dipanggil', async () => {
+    test('limit di-reserve atomik saat middleware lolos dan bisa di-refund', async () => {
         upsertUser({ jid: '628100@s.whatsapp.net', name: 'Tester' })
         const ctx = makeCtx({ user: { limit: 5 } })
         const result = await runMiddleware(ctx, makeHandler({ limit: 2 }))
         assert.deepEqual(result, { allowed: true })
 
-        ctx._limitCommit()
         const record = upsertUser({ jid: '628100@s.whatsapp.net', name: 'Tester' })
-        assert.equal(record.limit, 3)
+        assert.equal(record.limit, 3, 'limit langsung dikurangi saat reserve')
+        assert.equal(typeof ctx._limitRefund, 'function')
+
+        ctx._limitRefund()
+        const refunded = upsertUser({ jid: '628100@s.whatsapp.net', name: 'Tester' })
+        assert.equal(refunded.limit, 5, 'refund mengembalikan reserve')
+    })
+
+    test('reserve atomik: dua eksekusi paralel chat berbeda dengan limit 1 hanya satu lolos', async () => {
+        const { users } = await import('../src/services/database/json.js')
+        const record = upsertUser({ jid: '628103@s.whatsapp.net', name: 'Racer' })
+        record.limit = 1
+        users.set('628103', record)
+
+        const makeRacer = () => makeCtx({
+            m: { chat: '628103@s.whatsapp.net', userJid: '628103@s.whatsapp.net', key: { remoteJid: '628103@s.whatsapp.net' } },
+            chat: '628103@s.whatsapp.net',
+            sender: '628103@s.whatsapp.net'
+        })
+
+        const [a, b] = await Promise.all([
+            runMiddleware(makeRacer(), makeHandler({ limit: 1 })),
+            runMiddleware(makeRacer(), makeHandler({ limit: 1 }))
+        ])
+
+        assert.equal([a, b].filter(r => r.allowed).length, 1, 'hanya satu reserve berhasil')
+        assert.equal(getUser('628103@s.whatsapp.net').limit, 0, 'saldo tidak minus')
+    })
+
+    test('user tanpa record diblokir dan tidak dibuat oleh middleware', async () => {
+        const ctx = makeCtx({
+            m: { chat: '628104@s.whatsapp.net', userJid: '628104@s.whatsapp.net', key: { remoteJid: '628104@s.whatsapp.net' } },
+            chat: '628104@s.whatsapp.net',
+            sender: '628104@s.whatsapp.net'
+        })
+        const result = await runMiddleware(ctx, makeHandler({ limit: 1 }))
+        assert.equal(result.allowed, false)
+        assert.equal(getUser('628104@s.whatsapp.net'), null)
     })
 
     test('limit tidak berlaku untuk owner', async () => {

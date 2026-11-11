@@ -1,6 +1,9 @@
 import readline from 'readline'
+import path from 'path'
+import fs from 'fs'
 import pino from 'pino'
 import chalk from 'chalk'
+import { fileURLToPath } from 'url'
 
 import {
     useMultiFileAuthState,
@@ -10,19 +13,26 @@ import {
 } from '@whiskeysockets/baileys'
 
 import { smsg } from '../../utils/myfunc.js'
-import { normalizeLid, isJidStatus } from '../../utils/jid.js'
+import { normalizeLid } from '../../utils/jid.js'
+import { isDispatchableUpsertType, isDispatchableMessage } from './upsert-filters.js'
 import handleMessage from '../dispatcher/dispatcher.js'
 import { initPlugins } from '../plugin/loader.js'
 import { classifyDisconnect, reconnectDelayFor, describeDisconnect } from './reconnect.js'
 import { getConfig } from '../../services/config.js'
 import { reportPluginError } from '../errors/engine.js'
-import { setResolverSocket, captureFromContacts } from '../../services/identity-resolver.js'
+import { setResolverSocket, captureFromContacts, captureFromGroupMetadata, captureLidMappings } from '../../services/identity-resolver.js'
+import { setGroupCacheSocket, getCachedGroupMetadata, invalidateGroupMetadata } from '../../services/group-cache.js'
+import { storeOutgoingMessage, getMessageForRetry } from '../../services/message-store.js'
+import { logInfo, logWarn, logError } from '../../services/logger.js'
+import { upsertGroup } from '../../services/database/groups.js'
 
-const AUTH_DIR = './session'
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
+const AUTH_DIR = path.join(PROJECT_ROOT, 'session')
 const FAST_RESTART_LIMIT = 5
 const RESTART_COOLDOWN_MS = 1000
 const LOG_REPEAT_LIMIT = 3
 const LOG_REPEAT_EVERY = 10
+const VERSION_TTL_MS = 24 * 60 * 60 * 1000
 
 let rl = null
 
@@ -56,6 +66,7 @@ let activeOptions = null
 let loggedOut = false
 let lastAuth = null
 let waVersion = null
+let waVersionAt = 0
 let saveChain = Promise.resolve()
 let saveFailed = false
 let reconnectLog = { key: null, count: 0 }
@@ -104,6 +115,7 @@ function endSession(session) {
     if (activeSession === session) {
         activeSession = null
         setResolverSocket(null)
+        setGroupCacheSocket(null)
     }
 }
 
@@ -195,7 +207,6 @@ function scheduleReconnect(statusCode, type) {
 
     const scheduledGen = generation
 
-    // sengaja tanpa unref: timer ini yang menjaga proses tetap hidup selama menunggu reconnect
     reconnectTimer = setTimeout(() => {
         reconnectTimer = null
         reconnectNow(scheduledGen, type)
@@ -216,6 +227,7 @@ async function reconnectNow(scheduledGen, type) {
         await connectToWhatsApp(activeOptions || {})
     } catch (error) {
         reportPluginError('runtime:reconnect', error, {})
+        logWarn('runtime', 'connection.reconnect.failed', { message: error?.message })
         if (scheduledGen === generation) scheduleReconnect(null, 'error')
     }
 }
@@ -234,25 +246,53 @@ async function ensurePlugins() {
     }
 }
 
-async function defaultCreateSocket({ auth } = {}) {
-    const { state, saveCreds } = auth || (await useMultiFileAuthState(AUTH_DIR))
+function resolveMarkOnlineOnConnect() {
+    const config = getConfig()
+    const value = config?.markOnlineOnConnect
+    if (typeof value === 'boolean') return value
+    return config?.botMode !== 'self'
+}
 
-    if (!waVersion) {
-        try {
-            ({ version: waVersion } = await fetchLatestBaileysVersion())
-        } catch (error) {
-            reportPluginError('runtime:version', error, {})
-        }
+async function resolveBaileysVersion() {
+    if (waVersion && Date.now() - waVersionAt < VERSION_TTL_MS) return waVersion
+    try {
+        ({ version: waVersion } = await fetchLatestBaileysVersion())
+        waVersionAt = Date.now()
+    } catch (error) {
+        reportPluginError('runtime:version', error, {})
     }
+    return waVersion
+}
+
+function ensureSessionDir(dir) {
+    try {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
+        } else {
+            fs.chmodSync(dir, 0o700)
+        }
+    } catch (error) {
+        reportPluginError('runtime:session-dir', error, {})
+    }
+}
+
+async function defaultCreateSocket({ auth } = {}) {
+    ensureSessionDir(AUTH_DIR)
+    const { state, saveCreds } = auth || (await useMultiFileAuthState(AUTH_DIR))
+    const version = await resolveBaileysVersion()
 
     const sock = makeWASocket({
-        version: waVersion || undefined,
+        version: version || undefined,
         browser: ['Ubuntu', 'Chrome', '20.0.04'],
         logger: pino({ level: 'silent' }),
         auth: {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' }))
-        }
+        },
+        syncFullHistory: false,
+        markOnlineOnConnect: resolveMarkOnlineOnConnect(),
+        cachedGroupMetadata: async jid => getCachedGroupMetadata(jid),
+        getMessage: async key => getMessageForRetry(key)
     })
 
     return { sock, state, saveCreds }
@@ -267,11 +307,13 @@ function handleClose(session, lastDisconnect) {
     if (!reconnect) {
         loggedOut = true
         lastAuth = null
-        log('Sesi logout (status 401), tidak akan reconnect otomatis.', chalk.red)
+        log(`Sesi berhenti (status ${statusCode ?? 'unknown'}: ${describeDisconnect(type, statusCode)}), tidak akan reconnect otomatis.`, chalk.red)
         log('Hapus folder session lalu jalankan ulang bot untuk pairing ulang.', chalk.red)
+        logError('runtime', 'connection.stop', { statusCode, type })
         return
     }
 
+    logInfo('runtime', 'connection.reconnect.scheduled', { statusCode, type })
     scheduleReconnect(statusCode, type)
 }
 
@@ -286,6 +328,7 @@ function handleConnectionUpdate(session, { connection, lastDisconnect, qr, isNew
         restartStreak = 0
         reconnectLog = { key: null, count: 0 }
         log('WhatsApp connected.', chalk.green)
+        logInfo('runtime', 'connection.open', { user: session.sock?.user?.id })
         ensurePlugins()
         return
     }
@@ -338,6 +381,7 @@ async function startConnection(options) {
     sock.decodeJid = normalizeLid
     sock.public = true
     setResolverSocket(sock)
+    setGroupCacheSocket(sock)
 
     sock.ev.on('creds.update', () => {
         if (gen === generation) queueSave(saveCreds)
@@ -347,14 +391,21 @@ async function startConnection(options) {
         handleConnectionUpdate(session, update)
     })
 
-    sock.ev.on('messages.upsert', async ({ messages }) => {
+    sock.ev.on('messages.upsert', async ({ messages, type }) => {
         if (gen !== generation) return
+
+        if (!isDispatchableUpsertType(type)) {
+            for (const mek of messages || []) {
+                try {
+                    if (mek?.key?.fromMe && mek?.message) storeOutgoingMessage(mek.key, mek.message)
+                } catch {}
+            }
+            return
+        }
 
         for (const mek of messages) {
             try {
-                if (!mek?.message) continue
-                if (isJidStatus(mek.key?.remoteJid)) continue
-                if (mek.key?.id?.startsWith('BAE5') && mek.key.id.length === 16) continue
+                if (!isDispatchableMessage(mek)) continue
 
                 const m = smsg(sock, mek)
                 if (!m) continue
@@ -372,6 +423,37 @@ async function startConnection(options) {
 
     sock.ev.on('contacts.update', contacts => {
         captureFromContacts(contacts).catch(() => {})
+    })
+
+    sock.ev.on('groups.update', updates => {
+        if (gen !== generation) return
+
+        for (const update of updates || []) {
+            if (!update?.id) continue
+            invalidateGroupMetadata(update.id)
+            if (!update.subject) continue
+            try {
+                upsertGroup({ jid: update.id, name: update.subject })
+            } catch {}
+        }
+    })
+
+    sock.ev.on('group-participants.update', ({ id, participants } = {}) => {
+        if (gen !== generation) return
+        if (!id) return
+        invalidateGroupMetadata(id)
+        if (Array.isArray(participants)) captureFromContacts(participants).catch(() => {})
+    })
+
+    sock.ev.on('lid-mapping.update', mapping => {
+        if (gen !== generation) return
+        captureLidMappings([mapping]).catch(() => {})
+    })
+
+    sock.ev.on('messaging-history.set', ({ contacts, lidPnMappings } = {}) => {
+        if (gen !== generation) return
+        if (Array.isArray(contacts)) captureFromContacts(contacts).catch(() => {})
+        if (Array.isArray(lidPnMappings)) captureLidMappings(lidPnMappings).catch(() => {})
     })
 
     await requestPairingIfNeeded(session, options)

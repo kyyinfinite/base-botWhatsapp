@@ -5,6 +5,19 @@ import { getDailyLimit } from '../config.js'
 
 const now = () => new Date().toISOString()
 
+const LASTSEEN_PERSIST_MS = 60_000
+const LASTSEEN_TRACK_MAX = 5000
+const lastSeenPersistAt = new Map()
+
+function pruneLastSeenTracking() {
+    if (lastSeenPersistAt.size <= LASTSEEN_TRACK_MAX) return
+    let removed = 0
+    for (const key of lastSeenPersistAt.keys()) {
+        lastSeenPersistAt.delete(key)
+        if (++removed >= Math.floor(LASTSEEN_TRACK_MAX / 2)) break
+    }
+}
+
 export function getUserKey(jid) {
     const value = String(jid || '').trim()
     if (!value) return null
@@ -56,7 +69,14 @@ export function upsertUser({ jid, name = '', isPremium = false, isOwner = false,
     if (isNew || fieldsChanged) {
         users.set(key, record)
     } else {
-        users.touch(key, { lastSeen: record.lastSeen })
+        const last = lastSeenPersistAt.get(key) || 0
+        if (Date.now() - last >= LASTSEEN_PERSIST_MS) {
+            lastSeenPersistAt.set(key, Date.now())
+            pruneLastSeenTracking()
+            users.touch(key, { lastSeen: record.lastSeen })
+        } else {
+            users.patchMemory(key, { lastSeen: record.lastSeen })
+        }
     }
 
     return record
@@ -71,6 +91,34 @@ export function consumeUserLimit(jid, cost = 1) {
 
     const current = Number.isFinite(existing.limit) ? existing.limit : 0
     const record = { ...existing, limit: Math.max(0, current - cost), lastSeen: now() }
+    users.set(key, record)
+    return record
+}
+
+export function tryConsumeUserLimit(jid, cost = 1) {
+    const key = getUserKey(jid)
+    if (!key) return null
+
+    const existing = users.get(key)
+    if (!existing) return null
+
+    const current = Number.isFinite(existing.limit) ? existing.limit : 0
+    if (current < cost) return false
+
+    const record = { ...existing, limit: current - cost, lastSeen: now() }
+    users.set(key, record)
+    return record
+}
+
+export function refundUserLimit(jid, cost = 1) {
+    const key = getUserKey(jid)
+    if (!key) return null
+
+    const existing = users.get(key)
+    if (!existing) return null
+
+    const current = Number.isFinite(existing.limit) ? existing.limit : 0
+    const record = { ...existing, limit: current + cost, lastSeen: now() }
     users.set(key, record)
     return record
 }

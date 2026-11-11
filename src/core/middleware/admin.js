@@ -1,3 +1,5 @@
+import { getCachedGroupMetadata } from '../../services/group-cache.js'
+
 const normalize = (conn, jid) => {
     if (!jid) return ''
     return String(conn.decodeJid?.(jid) || jid).toLowerCase()
@@ -9,7 +11,7 @@ async function getAdminState(ctx) {
         return { isAdmin: !!ctx.m.isAdmin, isBotAdmin: !!ctx.m.isBotAdmin }
     }
 
-    const metadata = await ctx.conn.groupMetadata(ctx.chat)
+    const metadata = await getCachedGroupMetadata(ctx.chat, ctx.conn)
     const participants = metadata?.participants || []
     const sender = normalize(ctx.conn, ctx.sender)
     const bot = normalize(ctx.conn, ctx.conn.user?.id)

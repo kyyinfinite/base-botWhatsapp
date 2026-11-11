@@ -4,6 +4,9 @@ import ffmpeg from 'fluent-ffmpeg'
 import { prepareWAMessageMedia } from '@whiskeysockets/baileys'
 import { extractIE, waitAllPromises } from './utils.js'
 
+const FETCH_TIMEOUT_MS = 30_000
+const FETCH_MAX_BYTES = 50 * 1024 * 1024
+
 export class Toolkit {
         constructor() {}
 
@@ -26,11 +29,39 @@ export class Toolkit {
                 return await waitAllPromises(input);
         }
 
-        static async fetchBuffer(url, options = {}, { silent = true } = {}) {
+        static async fetchBuffer(url, options = {}, { silent = true, timeout = FETCH_TIMEOUT_MS, maxBytes = FETCH_MAX_BYTES } = {}) {
                 try {
-                        let response = await fetch(url, options);
-                        if (!response.ok) throw Error(`HTTP ${response.status}`);
-                        return Buffer.from(await response.arrayBuffer());
+                        const parsed = new URL(url)
+                        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                                throw new Error(`Skema tidak didukung: ${parsed.protocol}`)
+                        }
+
+                        const signal = options.signal ?? AbortSignal.timeout(timeout)
+                        const response = await fetch(url, { ...options, signal })
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+                        const declared = Number(response.headers.get('content-length'))
+                        if (Number.isFinite(declared) && declared > maxBytes) {
+                                throw new Error(`Ukuran melebihi batas: ${declared} > ${maxBytes}`)
+                        }
+
+                        if (!response.body) return Buffer.alloc(0)
+
+                        const reader = response.body.getReader()
+                        const chunks = []
+                        let received = 0
+                        for (;;) {
+                                const { done, value } = await reader.read()
+                                if (done) break
+                                received += value.byteLength
+                                if (received > maxBytes) {
+                                        try { await reader.cancel() } catch {}
+                                        throw new Error(`Ukuran melebihi batas: ${received} > ${maxBytes}`)
+                                }
+                                chunks.push(value)
+                        }
+
+                        return Buffer.concat(chunks)
                 } catch (error) {
                         if (silent) return Buffer.alloc(0);
                         throw error;

@@ -46,6 +46,13 @@ describe('plugin registry', () => {
         assert.equal(validatePlugin(makeHandler('x', { cooldown: 5, limit: true, customPrefix: /^a/ })), true)
     })
 
+    test('menolak customPrefix dengan flag g atau y', () => {
+        assert.throws(() => registerPlugin('a', makeHandler('x', { customPrefix: /abc/g })), /customPrefix.*flag|flag/i)
+        assert.throws(() => registerPlugin('a', makeHandler('x', { customPrefix: /abc/y })), /customPrefix.*flag|flag/i)
+        assert.throws(() => registerPlugin('a', makeHandler('x', { customPrefix: new RegExp('abc', 'gi') })), TypeError)
+        assert.equal(validatePlugin(makeHandler('x', { customPrefix: /abc/i })), true)
+    })
+
     test('command string dan array terdaftar dengan benar', () => {
         registerPlugin('a', makeHandler(['menu', 'Menu']))
         registerPlugin('b', makeHandler('ping'))

@@ -18,6 +18,12 @@ export function classifyDisconnect(statusCode) {
             return { type: 'restart', reconnect: true }
         case DisconnectReason.loggedOut:
             return { type: 'logout', reconnect: false }
+        case DisconnectReason.forbidden:
+            return { type: 'forbidden', reconnect: false }
+        case DisconnectReason.multideviceMismatch:
+            return { type: 'multideviceMismatch', reconnect: false }
+        case DisconnectReason.badSession:
+            return { type: 'badSession', reconnect: true }
         case DisconnectReason.connectionReplaced:
             return { type: 'replaced', reconnect: true }
         case DisconnectReason.connectionClosed:
@@ -45,6 +51,14 @@ export function describeDisconnect(type, statusCode) {
     switch (type) {
         case 'restart':
             return 'restart socket diminta WhatsApp'
+        case 'logout':
+            return 'sesi logout, kredensial tidak berlaku lagi'
+        case 'badSession':
+            return 'sesi tidak valid, bila berulang hapus folder session lalu pairing ulang'
+        case 'forbidden':
+            return 'akses ditolak WhatsApp'
+        case 'multideviceMismatch':
+            return 'registrasi multidevice tidak cocok, perlu pairing ulang'
         case 'replaced':
             return 'sesi dipakai perangkat/proses lain'
         case 'transient':

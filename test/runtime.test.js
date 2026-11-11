@@ -22,6 +22,10 @@ const { computeBackoff, shouldReconnect, RECONNECT_BASE_MS, RECONNECT_MAX_MS } =
 const connectModule = await import('../src/core/app/connect.js')
 const { default: connectToWhatsApp, closeActiveSocket, getActiveSocket } = connectModule
 const { setResolverSocket, resetResolverState, peekPNForLID } = await import('../src/services/identity-resolver.js')
+const { resetGroupCache } = await import('../src/services/group-cache.js')
+const { getGroup } = await import('../src/services/database/groups.js')
+const { storeOutgoingMessage, getMessageForRetry } = await import('../src/services/message-store.js')
+const { isDispatchableUpsertType, isDispatchableMessage } = await import('../src/core/app/upsert-filters.js')
 const { flushAll } = await import('../src/services/database/json.js')
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
@@ -96,6 +100,7 @@ const quickBackoff = () => 15
 beforeEach(async () => {
     await closeActiveSocket()
     resetResolverState()
+    resetGroupCache()
 })
 
 before(async () => {
@@ -425,6 +430,183 @@ describe('connection lifecycle', () => {
         assert.ok(first.calls.removeAllListeners >= 1, 'listener socket lama dibersihkan saat close')
         assert.ok(first.ev.listenerCount('messages.upsert') === 0)
 
+        await closeActiveSocket()
+    })
+})
+
+describe('upsert filters (phase 2)', () => {
+    test('hanya type notify yang diproses', () => {
+        assert.equal(isDispatchableUpsertType('notify'), true)
+        assert.equal(isDispatchableUpsertType('append'), false)
+        assert.equal(isDispatchableUpsertType(undefined), false)
+    })
+
+    const msg = (jid, id = 'REG1') => ({
+        key: { remoteJid: jid, fromMe: false, id },
+        message: { conversation: 'menu' }
+    })
+
+    test('pesan chat biasa lolos filter', () => {
+        assert.equal(isDispatchableMessage(msg('628111@s.whatsapp.net')), true)
+        assert.equal(isDispatchableMessage(msg('1203630299@g.us')), true)
+    })
+
+    test('status, broadcast, dan newsletter ditolak', () => {
+        assert.equal(isDispatchableMessage(msg('status@broadcast')), false)
+        assert.equal(isDispatchableMessage(msg('1203630299@broadcast')), false)
+        assert.equal(isDispatchableMessage(msg('1203630299@newsletter')), false)
+        assert.equal(isDispatchableMessage(msg(undefined)), false)
+    })
+
+    test('pesan tanpa konten dan echo BAE5 ditolak', () => {
+        assert.equal(isDispatchableMessage({ key: { remoteJid: '628111@s.whatsapp.net', id: 'X' } }), false)
+        assert.equal(isDispatchableMessage(null), false)
+        assert.equal(isDispatchableMessage(msg('628111@s.whatsapp.net', 'BAE5AABBCCDDEEFF')), false)
+        assert.equal(isDispatchableMessage(msg('628111@s.whatsapp.net', 'BAE5AABBCCDDEEFF0')), true)
+    })
+
+    test('pesan ephemeral tetap lolos filter (tidak dibuang)', () => {
+        const mek = {
+            key: { remoteJid: '628111@s.whatsapp.net', fromMe: false, id: 'EPHX' },
+            message: { ephemeralMessage: { message: { conversation: 'menu' } } }
+        }
+        assert.equal(isDispatchableMessage(mek), true)
+    })
+})
+
+describe('event routing (phase 2)', () => {
+    test('lid-mapping.update menyimpan mapping ke resolver', async () => {
+        const sockets = []
+        const { createSocket, state } = makeCreateSocket(sockets)
+        state.creds.registered = true
+
+        const sock = await connectToWhatsApp({
+            createSocket,
+            reconnectDelay: quickBackoff,
+            initPluginStack: async () => {}
+        })
+
+        await sock.ev.emit('lid-mapping.update', { lid: '555000111222333@lid', pn: '628123000111@s.whatsapp.net' })
+
+        assert.equal(peekPNForLID('555000111222333@lid'), '628123000111@s.whatsapp.net')
+        await closeActiveSocket()
+    })
+
+    test('messaging-history.set menangkap mapping tanpa mengeksekusi pesan', async () => {
+        const sockets = []
+        const { createSocket, state } = makeCreateSocket(sockets)
+        state.creds.registered = true
+
+        const sock = await connectToWhatsApp({
+            createSocket,
+            reconnectDelay: quickBackoff,
+            initPluginStack: async () => {}
+        })
+
+        await sock.ev.emit('messaging-history.set', {
+            contacts: [{ id: '628123000222@s.whatsapp.net', lid: '555000111222444@lid' }],
+            lidPnMappings: [{ lid: '555000111222555@lid', pn: '628123000333@s.whatsapp.net' }]
+        })
+
+        assert.equal(peekPNForLID('555000111222444@lid'), '628123000222@s.whatsapp.net')
+        assert.equal(peekPNForLID('555000111222555@lid'), '628123000333@s.whatsapp.net')
+        assert.equal(state.created, 1, 'tidak ada eksekusi ulang dari history sync')
+        await closeActiveSocket()
+    })
+
+    test('groups.update menyimpan nama grup baru ke database', async () => {
+        const sockets = []
+        const { createSocket, state } = makeCreateSocket(sockets)
+        state.creds.registered = true
+
+        const sock = await connectToWhatsApp({
+            createSocket,
+            reconnectDelay: quickBackoff,
+            initPluginStack: async () => {}
+        })
+
+        const jid = '120363999777888@g.us'
+        await sock.ev.emit('groups.update', [{ id: jid, subject: 'Nama Grup Baru' }])
+
+        assert.equal(getGroup(jid)?.name, 'Nama Grup Baru')
+        await closeActiveSocket()
+    })
+
+    test('group-participants.update meng-invalidate cache dan menangkap identitas', async () => {
+        const { captureGroupMetadata, getCachedGroupMetadata } = await import('../src/services/group-cache.js')
+        const sockets = []
+        const { createSocket, state } = makeCreateSocket(sockets)
+        state.creds.registered = true
+
+        const sock = await connectToWhatsApp({
+            createSocket,
+            reconnectDelay: quickBackoff,
+            initPluginStack: async () => {}
+        })
+
+        const gid = '120363999555444@g.us'
+        captureGroupMetadata({ id: gid, subject: 'Sebelum', participants: [] }, gid)
+        assert.equal((await getCachedGroupMetadata(gid)).subject, 'Sebelum')
+
+        await sock.ev.emit('group-participants.update', {
+            id: gid,
+            participants: [{ id: '555000111222777@lid', lid: '555000111222777@lid', phoneNumber: '628123000777@s.whatsapp.net' }],
+            action: 'add'
+        })
+
+        assert.equal(await getCachedGroupMetadata(gid), undefined, 'cache di-invalidate')
+        assert.equal(peekPNForLID('555000111222777@lid'), '628123000777@s.whatsapp.net')
+        await closeActiveSocket()
+    })
+
+    test('echo append dari pesan sendiri tersimpan untuk retry (F-6)', async () => {
+        const sockets = []
+        const { createSocket, state } = makeCreateSocket(sockets)
+        state.creds.registered = true
+
+        const sock = await connectToWhatsApp({
+            createSocket,
+            reconnectDelay: quickBackoff,
+            initPluginStack: async () => {}
+        })
+
+        const sentKey = { remoteJid: '628123000888@s.whatsapp.net', fromMe: true, id: 'SENT01' }
+        await sock.ev.emit('messages.upsert', {
+            messages: [{ key: sentKey, message: { conversation: 'halo keluar' } }],
+            type: 'append'
+        })
+
+        assert.deepEqual(getMessageForRetry({ id: 'SENT01' }), { conversation: 'halo keluar' })
+
+        await sock.ev.emit('messages.upsert', {
+            messages: [{ key: { remoteJid: '628123000888@s.whatsapp.net', fromMe: false, id: 'IN01' }, message: { conversation: 'masuk offline' } }],
+            type: 'append'
+        })
+
+        assert.equal(getMessageForRetry({ id: 'IN01' }), undefined, 'pesan masuk offline tidak masuk store')
+        await closeActiveSocket()
+    })
+
+    test('event routing socket lama tidak menulis setelah reconnect', async () => {
+        const sockets = []
+        const { createSocket, state } = makeCreateSocket(sockets)
+        state.creds.registered = true
+
+        const first = await connectToWhatsApp({
+            createSocket,
+            reconnectDelay: quickBackoff,
+            initPluginStack: async () => {}
+        })
+
+        await first.ev.emit('connection.update', { connection: 'close', lastDisconnect: { error: { output: { statusCode: 515 } } } })
+        await sleep(80)
+        assert.equal(state.created, 2)
+
+        await first.ev.emit('lid-mapping.update', { lid: '555000111222666@lid', pn: '628123000666@s.whatsapp.net' })
+        await first.ev.emit('groups.update', [{ id: '120363999777999@g.us', subject: 'Dari Socket Basi' }])
+
+        assert.equal(peekPNForLID('555000111222666@lid'), null)
+        assert.equal(getGroup('120363999777999@g.us'), null)
         await closeActiveSocket()
     })
 })

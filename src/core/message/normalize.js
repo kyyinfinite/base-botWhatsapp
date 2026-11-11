@@ -1,19 +1,21 @@
-/**
- * @param {object} m - a message object already processed by smsg()
- * @returns {{ body: string, isButtonResponse: boolean }}
- */
+import { normalizeMessageContent } from '@whiskeysockets/baileys'
+
 export function extractCommandFromMessage(m) {
     let body = ''
     let isButtonResponse = false
     try {
-        if (m.message) {
-            if (m.message.conversation) body = m.message.conversation
-            else if (m.message.extendedTextMessage?.text) body = m.message.extendedTextMessage.text
-            else if (m.message.imageMessage?.caption) body = m.message.imageMessage.caption
-            else if (m.message.videoMessage?.caption) body = m.message.videoMessage.caption
-            else if (m.message.documentMessage?.caption) body = m.message.documentMessage.caption
-            else if (m.message.interactiveResponseMessage) {
-                const inter = m.message.interactiveResponseMessage
+        const content = normalizeMessageContent(m?.message) || m?.message
+        if (content) {
+            if (content.conversation) body = content.conversation
+            else if (content.extendedTextMessage?.text) body = content.extendedTextMessage.text
+            else if (content.imageMessage?.caption) body = content.imageMessage.caption
+            else if (content.videoMessage?.caption) body = content.videoMessage.caption
+            else if (content.documentMessage?.caption) body = content.documentMessage.caption
+            else if (content.documentWithCaptionMessage?.message?.documentMessage?.caption) {
+                body = content.documentWithCaptionMessage.message.documentMessage.caption
+            }
+            else if (content.interactiveResponseMessage) {
+                const inter = content.interactiveResponseMessage
                 if (inter.nativeFlowResponseMessage) {
                     const flow = inter.nativeFlowResponseMessage
                     if (flow.paramsJson) {
@@ -30,11 +32,11 @@ export function extractCommandFromMessage(m) {
                     body = inter.singleSelectReply.selectedRowId || ''
                     isButtonResponse = true
                 }
-            } else if (m.message.templateButtonReplyMessage) {
-                body = m.message.templateButtonReplyMessage.selectedId || ''
+            } else if (content.templateButtonReplyMessage) {
+                body = content.templateButtonReplyMessage.selectedId || ''
                 isButtonResponse = true
-            } else if (m.message.buttonsResponseMessage) {
-                body = m.message.buttonsResponseMessage.selectedButtonId || ''
+            } else if (content.buttonsResponseMessage) {
+                body = content.buttonsResponseMessage.selectedButtonId || ''
                 isButtonResponse = true
             }
         }
@@ -44,10 +46,6 @@ export function extractCommandFromMessage(m) {
     return { body, isButtonResponse }
 }
 
-/**
- * @param {object} m - a message object already processed by smsg()
- * @returns {object} the same `m`, enriched
- */
 export function normalizeMessage(m) {
     const { body, isButtonResponse } = extractCommandFromMessage(m)
     m.text = body

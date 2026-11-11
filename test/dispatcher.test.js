@@ -20,6 +20,8 @@ fs.writeFileSync(process.env.WA_CONFIG_PATH, JSON.stringify({
 }))
 
 const { parseCommand, parseButtonResponse, matchPatternPlugin } = await import('../src/core/dispatcher/parse.js')
+const { extractCommandFromMessage, normalizeMessage } = await import('../src/core/message/normalize.js')
+const { smsg } = await import('../src/utils/myfunc.js')
 const { registerPlugin, unregisterPlugin, getKeysOf, metadata } = await import('../src/core/plugin/registry.js')
 const { upsertUser, getUser } = await import('../src/services/database/users.js')
 const { updateConfig, getConfig } = await import('../src/services/config.js')
@@ -213,6 +215,97 @@ describe('pattern plugin matching', () => {
     test('teks kosong mengembalikan null', () => {
         assert.equal(matchPatternPlugin({ text: '' }, patternHandlers), null)
     })
+
+    test('regex berflag g tetap cocok berulang (lastIndex di-reset)', () => {
+        const gHandler = { customPrefix: /kw/g }
+        assert.equal(matchPatternPlugin({ text: 'kw satu' }, [gHandler]), gHandler)
+        assert.equal(matchPatternPlugin({ text: 'kw dua' }, [gHandler]), gHandler)
+        assert.equal(matchPatternPlugin({ text: 'kw tiga' }, [gHandler]), gHandler)
+    })
+})
+
+describe('message content unwrapping', () => {
+    test('ephemeralMessage membuka wrapper ke conversation', () => {
+        const m = { message: { ephemeralMessage: { message: { conversation: 'menu' } } } }
+        assert.deepEqual(extractCommandFromMessage(m), { body: 'menu', isButtonResponse: false })
+    })
+
+    test('viewOnceMessage membuka wrapper ke caption media', () => {
+        const m = { message: { viewOnceMessage: { message: { imageMessage: { caption: '.menu' } } } } }
+        assert.equal(extractCommandFromMessage(m).body, '.menu')
+    })
+
+    test('documentWithCaptionMessage membuka wrapper ke caption dokumen', () => {
+        const m = {
+            message: {
+                documentWithCaptionMessage: {
+                    message: { documentMessage: { caption: '.sticker' } }
+                }
+            }
+        }
+        assert.equal(extractCommandFromMessage(m).body, '.sticker')
+    })
+
+    test('wrapper bersarang (ephemeral di dalam viewOnce) tetap terbuka', () => {
+        const m = {
+            message: {
+                viewOnceMessage: {
+                    message: { ephemeralMessage: { message: { conversation: 'ping' } } }
+                }
+            }
+        }
+        assert.equal(extractCommandFromMessage(m).body, 'ping')
+    })
+
+    test('smsg mengekspos tipe asli dan teks dari pesan ephemeral', () => {
+        const conn = { user: { id: BOT_JID } }
+        const mek = {
+            key: { remoteJid: USER_JID, fromMe: false, id: 'EPH1' },
+            message: { ephemeralMessage: { message: { imageMessage: { caption: '.sc' } } } }
+        }
+        const m = smsg(conn, mek)
+
+        assert.equal(m.mtype, 'imageMessage')
+        assert.equal(m.text, '.sc')
+        assert.equal(m.msg?.caption, '.sc')
+        assert.equal(m.message.ephemeralMessage.message.imageMessage.caption, '.sc', 'pesan mentah tetap utuh')
+    })
+
+    test('smsg membuka quoted yang dibungkus ephemeral', () => {
+        const conn = { user: { id: BOT_JID } }
+        const mek = {
+            key: { remoteJid: USER_JID, fromMe: false, id: 'EPH2' },
+            message: {
+                ephemeralMessage: {
+                    message: {
+                        extendedTextMessage: {
+                            text: 'lihat ini',
+                            contextInfo: {
+                                participant: USER_JID,
+                                stanzaId: 'Q1',
+                                quotedMessage: { ephemeralMessage: { message: { conversation: 'isi quote' } } }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        const m = smsg(conn, mek)
+
+        assert.equal(m.quoted.mtype, 'conversation')
+        assert.equal(m.quoted.text, 'isi quote')
+        assert.equal(m.quoted.conversation, 'isi quote')
+    })
+
+    test('normalizeMessage mengambil body dari wrapper ephemeral', () => {
+        const m = {
+            key: { remoteJid: USER_JID, id: 'EPH3' },
+            message: { ephemeralMessage: { message: { conversation: 'e2eping' } } }
+        }
+        normalizeMessage(m)
+        assert.equal(m.text, 'e2eping')
+        assert.equal(m.isButtonResponse, false)
+    })
 })
 
 describe('dispatcher end-to-end', () => {
@@ -326,6 +419,26 @@ describe('dispatcher end-to-end', () => {
         await handleMessage(conn, makeM('.e2eping', { chat: '1203630299@g.us', sender: '628555@s.whatsapp.net' }))
         assert.ok(conn.sent.some(s => s.content.text === 'pong'))
         assert.equal(getUser('1203630299@g.us'), null, 'JID grup tidak boleh jadi user record')
+    })
+
+    test('plugin gagal mengembalikan limit yang di-reserve', async () => {
+        const { users } = await import('../src/services/database/json.js')
+        const rec = upsertUser({ jid: '628446@s.whatsapp.net', name: 'Refunder' })
+        rec.limit = 5
+        users.set('628446', rec)
+
+        const file = 'test://refundthrow'
+        register(file, plugin(async () => {
+            throw new Error('boom')
+        }, { command: ['e2erefundthrow'], limit: 2 }))
+
+        try {
+            const conn = makeConn()
+            await handleMessage(conn, makeM('.e2erefundthrow', { sender: '628446@s.whatsapp.net' }))
+            assert.equal(getUser('628446@s.whatsapp.net').limit, 5, 'limit di-refund setelah kegagalan plugin')
+        } finally {
+            unregisterPlugin(file, getKeysOf(file))
+        }
     })
 
     test('limit habis memblokir plugin', async () => {

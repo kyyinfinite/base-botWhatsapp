@@ -4,6 +4,7 @@ import {
     isPnUser,
     isJidGroup as _isJidGroup,
     isJidBroadcast as _isJidBroadcast,
+    isJidNewsletter as _isJidNewsletter,
     isLidUser as _isLidUser,
     isJidStatusBroadcast
 } from '@whiskeysockets/baileys'
@@ -19,6 +20,10 @@ export const isJidGroup = jid =>
 
 export const isJidBroadcast = jid =>
     !!jid && !!_isJidBroadcast(jid)
+
+
+export const isJidNewsletter = jid =>
+    !!jid && !!_isJidNewsletter(jid)
 
 
 export const isJidStatus = jid =>

@@ -91,7 +91,7 @@ async function coalesce(key, task) {
     return promise
 }
 
-export async function storeIdentityMapping(lid, pn) {
+export async function storeIdentityMapping(lid, pn, { syncRemote = true } = {}) {
     const pair = normalizePair(lid, pn)
     if (!pair) return false
 
@@ -124,7 +124,7 @@ export async function storeIdentityMapping(lid, pn) {
     } catch {}
 
     const store = getMappingStore()
-    if (store?.storeLIDPNMappings) {
+    if (syncRemote && store?.storeLIDPNMappings) {
         try {
             await store.storeLIDPNMappings([
                 { lid: `${lidUser}@lid`, pn: `${pnUser}@s.whatsapp.net` }
@@ -241,6 +241,14 @@ async function storePairs(pairs) {
         const pair = normalizePair(a, b)
         if (!pair) continue
         await storeIdentityMapping(pair.lid, pair.pn).catch(() => {})
+    }
+}
+
+export async function captureLidMappings(mappings) {
+    if (!Array.isArray(mappings)) return
+    for (const mapping of mappings) {
+        if (!mapping?.lid || !mapping?.pn) continue
+        await storeIdentityMapping(mapping.lid, mapping.pn, { syncRemote: false }).catch(() => {})
     }
 }
 

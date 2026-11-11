@@ -1,4 +1,4 @@
-import { test, describe, before, after } from 'node:test'
+import { test, describe, before, after, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'fs'
 import os from 'os'
@@ -251,6 +251,34 @@ describe('user database', () => {
         const count = resetAllUserLimits(7)
         assert.ok(count >= 3)
         assert.equal(getUser('628113@s.whatsapp.net').limit, 7)
+    })
+})
+
+describe('lastSeen throttle (F-11)', () => {
+    test('lastSeen fresh di memori, persist disk dibatasi per menit', async () => {
+        mock.timers.enable({ apis: ['Date'] })
+        try {
+            upsertUser({ jid: '628118@s.whatsapp.net', name: 'Throttle' })
+            await flushDirty()
+            const persisted = readJson(usersFile)['628118']
+
+            mock.timers.tick(5000)
+            upsertUser({ jid: '628118@s.whatsapp.net', name: 'Throttle' })
+            await flushDirty()
+
+            assert.equal(readJson(usersFile)['628118'].lastSeen, persisted.lastSeen, 'belum 1 menit: tidak ada tulis ulang lastSeen')
+            assert.notEqual(upsertUser({ jid: '628118@s.whatsapp.net', name: 'Throttle' }).lastSeen, persisted.lastSeen, 'lastSeen memori tetap fresh')
+
+            mock.timers.tick(61_000)
+            upsertUser({ jid: '628118@s.whatsapp.net', name: 'Throttle' })
+            await flushDirty()
+            assert.notEqual(readJson(usersFile)['628118'].lastSeen, persisted.lastSeen, 'setelah 1 menit: lastSeen ter-persist')
+
+            users.delete('628118')
+            await flushDirty()
+        } finally {
+            mock.timers.reset()
+        }
     })
 })
 

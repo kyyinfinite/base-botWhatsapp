@@ -54,6 +54,10 @@ export function validatePlugin(handler) {
         toCommandList(handler.command)
     }
 
+    if (hasPattern && handler.customPrefix instanceof RegExp && /[gy]/.test(handler.customPrefix.flags)) {
+        throw new TypeError("handler.customPrefix tidak boleh memakai flag 'g' atau 'y'")
+    }
+
     for (const [key, kind] of Object.entries(ALLOWED_META_TYPES)) {
         const value = handler[key]
         if (value === undefined || value === null) continue

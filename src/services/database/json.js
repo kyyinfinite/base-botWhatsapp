@@ -101,6 +101,11 @@ const collection = name => ({
         write(name, data)
         return data[id]
     },
+    patchMemory: (id, patch) => {
+        const data = read(name, {})
+        data[id] = { ...(data[id] || {}), ...patch }
+        return data[id]
+    },
     setAll: data => write(name, data),
     delete: id => {
         const data = read(name, {})
@@ -121,5 +126,7 @@ export const users = collection('users.json')
 export const groups = collection('groups.json')
 export const settings = collection('settings.json')
 export const identityMappings = collection('identity.json')
-export const jsonDatabase = { users, groups, settings, identityMappings }
+export const outgoingMessages = collection('messages.json')
+export const schedules = collection('schedules.json')
+export const jsonDatabase = { users, groups, settings, identityMappings, outgoingMessages, schedules }
 export default jsonDatabase
