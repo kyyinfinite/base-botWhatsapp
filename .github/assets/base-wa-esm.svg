@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="180" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+  <title id="title">Base WA ESM</title>
+  <desc id="desc">A modular chat symbol with connected nodes beside the Base WA ESM wordmark.</desc>
+  <defs>
+    <linearGradient id="g" x1="20" y1="20" x2="150" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2BD69B"/><stop offset="1" stop-color="#087F68"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="156" height="156" rx="42" fill="#0D1720"/>
+  <path d="M48 62c0-12.15 9.85-22 22-22h44c12.15 0 22 9.85 22 22v27c0 12.15-9.85 22-22 22H89l-23 18v-18h4" fill="none" stroke="url(#g)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M77 75h1M99 75h1M121 75h1" stroke="#DFFFF3" stroke-width="9" stroke-linecap="round"/>
+  <path d="M91 129l17 17 17-17" fill="none" stroke="#2BD69B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="198" y="84" fill="#0D1720" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="49" font-weight="800" letter-spacing="-1.8">BASE WA <tspan fill="#0C9B76">ESM</tspan></text>
+  <text x="201" y="119" fill="#61717C" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" letter-spacing="3.1">MODULAR WHATSAPP FRAMEWORK</text>
+</svg>
